@@ -87,6 +87,11 @@ def carregar_dados():
         data = sheet.get_all_records()
         df = pd.DataFrame(data)
         
+        # --- CORREÇÃO DO NOME DAS COLUNAS (Fix do Traço "-") ---
+        # Normaliza tudo para minúsculo e remove espaços extras
+        if not df.empty:
+            df.columns = df.columns.str.lower().str.strip()
+
         colunas_esperadas = [
             'data', 'turno', 'situacao', 'hora_inicio', 'hora_fim', 
             'sala', 'professor', 'turma', 'data_registro',
@@ -98,6 +103,7 @@ def carregar_dados():
         
         for col in colunas_esperadas:
             if col not in df.columns:
+                # Se não encontrar a coluna mesmo após normalizar, aí sim coloca '-'
                 df[col] = 0 if 'qtd' in col else '-'
                 
         df['qtd_chromebooks'] = pd.to_numeric(df['qtd_chromebooks'], errors='coerce').fillna(0)
@@ -161,11 +167,10 @@ def verificar_disponibilidade_recursos(df, data_agendamento, inicio_novo, fim_no
         
     return True, ""
 
-# --- GERADOR DE IMAGEM HD (ATUALIZADO COM TURNO) ---
+# --- GERADOR DE IMAGEM HD (MANTEVE O TURNO) ---
 def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     plt.rcParams['font.family'] = 'DejaVu Sans'
 
-    # ADICIONADO 'turno' na lista de colunas
     colunas = ['hora_inicio', 'hora_fim', 'turno', 'sala', 'professor', 'turma', 'situacao']
     df = df_filtrado[colunas].copy()
 
@@ -179,14 +184,12 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
         'situacao': 'Detalhe'
     }, inplace=True)
 
-    # Ajuste das larguras para caber a nova coluna 'Turno'
-    # Soma deve ser próxima de 1.0
     col_widths = [0.08, 0.08, 0.10, 0.24, 0.20, 0.18, 0.12]
 
     linhas = len(df)
     altura = 2.6 + linhas * 0.5
 
-    fig = plt.figure(figsize=(14, altura), dpi=300) # Aumentei um pouco a largura da figura para 14
+    fig = plt.figure(figsize=(14, altura), dpi=300)
 
     ax_header = fig.add_axes([0.04, 0.80, 0.92, 0.18])
     ax_header.axis("off")
@@ -209,7 +212,7 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
 
     tabela = ax_table.table(cellText=df.values, colLabels=df.columns, colWidths=col_widths, loc="upper center", cellLoc="center")
     tabela.auto_set_font_size(False)
-    tabela.set_fontsize(10) # Reduzi levemente a fonte para caber tudo
+    tabela.set_fontsize(10)
     tabela.scale(1, 1.4)
 
     for (r, c), cell in tabela.get_celld().items():
@@ -310,13 +313,14 @@ with tab2:
         df['data'] = df['data'].astype(str)
         df_view = df[df['data'] == str(filtro_data)]
         
+        # Filtro corrigido
         if filtro_turno:
             df_view = df_view[df_view['turno'].isin(filtro_turno)]
             
         if not df_view.empty:
             df_view = df_view.sort_values(by='hora_inicio')
             
-            # --- ATUALIZAÇÃO DA TABELA VISUAL (Adicionado 'turno') ---
+            # --- ATUALIZAÇÃO DA TABELA VISUAL (Com 'turno' garantido) ---
             cols = ['hora_inicio', 'hora_fim', 'turno', 'sala', 'professor', 'situacao', 'turma', 'qtd_chromebooks', 'qtd_notebooks']
             df_visualizacao = df_view[cols].copy()
             df_visualizacao.rename(columns={
