@@ -199,7 +199,7 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     col_widths = [0.08, 0.12, 0.20, 0.20, 0.15, 0.11, 0.07, 0.07]
 
     linhas = len(df_final)
-    altura = 2.6 + linhas * 0.5
+    altura = max(6, 2.8 + linhas * 0.55)
 
     fig = plt.figure(figsize=(16, altura), dpi=300) # Aumentei largura para 16 para caber tudo
 
@@ -219,7 +219,7 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     ax_header.text(0.55, 0.62, "ENSALAMENTO DIÁRIO", ha="center", va="center", fontsize=18, fontweight="bold", color="#004587")
     ax_header.text(0.55, 0.30, f"Data: {data_str}", ha="center", va="center", fontsize=13, color="#555555")
 
-    ax_table = fig.add_axes([0.04, 0.05, 0.92, 0.70])
+    ax_table = fig.add_axes([0.04, 0.10, 0.92, 0.62])
     ax_table.axis("off")
 
     tabela = ax_table.table(cellText=df_final.values, colLabels=df_final.columns, colWidths=col_widths, loc="upper center", cellLoc="center")
