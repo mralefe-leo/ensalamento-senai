@@ -6,6 +6,7 @@ from datetime import datetime, time
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import io
+import json
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Gestão de Salas", layout="wide")
@@ -42,20 +43,27 @@ HORARIOS_TURNO = {
     "Noite": { "Completo": (time(18, 0), time(22, 0)), "1º Horário": (time(18, 0), time(20, 0)), "2º Horário": (time(20, 0), time(22, 0)) }
 }
 
-# --- CONEXÃO COM GOOGLE SHEETS (HÍBRIDA & CORRIGIDA) ---
+# --- CONEXÃO COM GOOGLE SHEETS (ESTRATÉGIA JSON COMPLETO) ---
 @st.cache_resource
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # Tenta conectar usando os Segredos da Nuvem (Streamlit Cloud)
+    # 1. Tenta conectar via Streamlit Cloud (Segredos)
     if "gcp_service_account" in st.secrets:
-        # CONVERTE PARA DICIONÁRIO E CORRIGE A CHAVE
-        creds_dict = dict(st.secrets["gcp_service_account"])
-        creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-        
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-    
-    # Se falhar, tenta conectar usando o arquivo local (Seu Computador)
+        try:
+            # Pega o conteúdo JSON inteiro que colaremos nos segredos
+            json_conteudo = st.secrets["gcp_service_account"]["json_file"]
+            
+            # Transforma o texto em dicionário Python
+            creds_dict = json.loads(json_conteudo)
+            
+            # Cria as credenciais
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        except Exception as e:
+            st.error(f"Erro ao ler o segredo JSON: {e}")
+            st.stop()
+            
+    # 2. Se falhar (ou estiver local), tenta o arquivo físico
     else:
         creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
         
