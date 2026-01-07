@@ -57,7 +57,6 @@ HORARIOS_TURNO = {
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # 1. TENTA LER OS SEGREDOS DA NUVEM (Prioridade)
     if "gcp_service_account" in st.secrets:
         try:
             creds_dict = dict(st.secrets["gcp_service_account"])
@@ -71,7 +70,6 @@ def conectar_google_sheets():
             st.error(f"Erro ao ler Segredos: {e}")
             st.stop()
 
-    # 2. SE FALHAR, TENTA ARQUIVO LOCAL
     try:
         creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
         client = gspread.authorize(creds)
@@ -87,8 +85,6 @@ def carregar_dados():
         data = sheet.get_all_records()
         df = pd.DataFrame(data)
         
-        # --- CORREÇÃO DO NOME DAS COLUNAS (Fix do Traço "-") ---
-        # Normaliza tudo para minúsculo e remove espaços extras
         if not df.empty:
             df.columns = df.columns.str.lower().str.strip()
 
@@ -103,7 +99,6 @@ def carregar_dados():
         
         for col in colunas_esperadas:
             if col not in df.columns:
-                # Se não encontrar a coluna mesmo após normalizar, aí sim coloca '-'
                 df[col] = 0 if 'qtd' in col else '-'
                 
         df['qtd_chromebooks'] = pd.to_numeric(df['qtd_chromebooks'], errors='coerce').fillna(0)
@@ -167,7 +162,7 @@ def verificar_disponibilidade_recursos(df, data_agendamento, inicio_novo, fim_no
         
     return True, ""
 
-# --- GERADOR DE IMAGEM HD (MANTEVE O TURNO) ---
+# --- GERADOR DE IMAGEM HD (COM DESTAQUE PARA INTERVALO) ---
 def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     plt.rcParams['font.family'] = 'DejaVu Sans'
 
@@ -215,14 +210,28 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     tabela.set_fontsize(10)
     tabela.scale(1, 1.4)
 
+    # Lógica de Cores da Tabela
     for (r, c), cell in tabela.get_celld().items():
         cell.set_edgecolor("#c0c0c0")
         cell.set_linewidth(0.5)
+        
+        # CABEÇALHO
         if r == 0:
             cell.set_facecolor("#005CAA")
             cell.set_text_props(color="white", weight="bold")
         else:
-            cell.set_facecolor("#f5f7fa" if r % 2 == 0 else "white")
+            # PINTURA INTELIGENTE DE LINHAS
+            # Verifica se é INTERVALO
+            # A coluna "professor" (Docente) é a index 4 na visualização (Início, Fim, Turno, Sala, Docente...)
+            # Como r começa em 1 para dados, r-1 é o index do DataFrame
+            
+            nome_professor = str(df.iloc[r-1]['Docente']).upper()
+            
+            if "INTERVALO" in nome_professor:
+                cell.set_facecolor("#FFFACD") # Amarelo Claro (LemonChiffon) para Intervalo
+                cell.set_text_props(weight='bold', color="#555")
+            else:
+                cell.set_facecolor("#f5f7fa" if r % 2 == 0 else "white")
 
     buf = io.BytesIO()
     plt.savefig(buf, format="png", dpi=300, pad_inches=0.2)
@@ -246,8 +255,10 @@ with st.sidebar:
 st.title("Gestão de Salas")
 st.markdown("---")
 
-tab1, tab2 = st.tabs(["Novo Agendamento", "Visualizar Agenda"])
+# ADICIONADA TAB DE COORDENAÇÃO
+tab1, tab2, tab3 = st.tabs(["Novo Agendamento", "Visualizar Agenda", "🔐 Coordenação"])
 
+# --- TAB 1: PROFESSORES (SEM OPÇÃO DE INTERVALO) ---
 with tab1:
     with st.form("form_agendamento"):
         st.subheader("Dados da Aula")
@@ -282,6 +293,9 @@ with tab1:
         if btn_agendar:
             if not professor or not turma:
                 st.warning("⚠️ Preencha Professor e Turma.")
+            # Bloqueio de segurança simples para evitar que professores escrevam "Intervalo" no nome
+            elif "INTERVALO" in professor.upper():
+                st.error("⚠️ Agendamento de Intervalo é restrito à aba de Coordenação.")
             else:
                 df_atual = carregar_dados()
                 conflito_sala, msg_sala = verificar_conflito_sala(df_atual, sala, data, hora_inicio, hora_fim)
@@ -298,6 +312,7 @@ with tab1:
                     st.success(f"✅ Agendado com Sucesso! (Recursos reservados: {qtd_chrome} Chromes, {qtd_note} Notes)")
                     st.cache_data.clear()
 
+# --- TAB 2: VISUALIZAÇÃO ---
 with tab2:
     st.subheader("Quadro de Horários")
     c1, c2, c3 = st.columns(3)
@@ -313,14 +328,12 @@ with tab2:
         df['data'] = df['data'].astype(str)
         df_view = df[df['data'] == str(filtro_data)]
         
-        # Filtro corrigido
         if filtro_turno:
             df_view = df_view[df_view['turno'].isin(filtro_turno)]
             
         if not df_view.empty:
             df_view = df_view.sort_values(by='hora_inicio')
             
-            # --- ATUALIZAÇÃO DA TABELA VISUAL (Com 'turno' garantido) ---
             cols = ['hora_inicio', 'hora_fim', 'turno', 'sala', 'professor', 'situacao', 'turma', 'qtd_chromebooks', 'qtd_notebooks']
             df_visualizacao = df_view[cols].copy()
             df_visualizacao.rename(columns={
@@ -329,6 +342,7 @@ with tab2:
                 'qtd_chromebooks': 'Chromebooks', 'qtd_notebooks': 'Notebooks'
             }, inplace=True)
             
+            # Formatação condicional simples na tabela interativa (opcional, streamlt limita cores)
             st.dataframe(df_visualizacao, use_container_width=True, hide_index=True, column_config={
                 "Início": st.column_config.TimeColumn(format="HH:mm"), 
                 "Fim": st.column_config.TimeColumn(format="HH:mm")
@@ -346,3 +360,67 @@ with tab2:
                 st.caption(f"Total reservado: {total_c} Chromebooks e {total_n} Notebooks.")
         else: st.info("Nenhum agendamento para os turnos selecionados.")
     else: st.info("Banco de dados vazio.")
+
+# --- TAB 3: ÁREA RESTRITA (COORDENAÇÃO) ---
+with tab3:
+    st.header("Área Restrita da Coordenação")
+    
+    # Inicializa estado da senha se não existir
+    if 'coord_logado' not in st.session_state:
+        st.session_state['coord_logado'] = False
+
+    if not st.session_state['coord_logado']:
+        senha_input = st.text_input("Digite a Senha de Acesso:", type="password")
+        if st.button("Acessar Painel"):
+            if senha_input == "#ESS2026":
+                st.session_state['coord_logado'] = True
+                st.rerun()
+            else:
+                st.error("Senha Incorreta.")
+    else:
+        st.success("🔓 Acesso Permitido: Modo Coordenação")
+        if st.button("Sair / Bloquear"):
+            st.session_state['coord_logado'] = False
+            st.rerun()
+            
+        st.markdown("---")
+        st.subheader("Agendamento de Intervalos / Bloqueios")
+        
+        with st.form("form_coord"):
+            c_col1, c_col2 = st.columns(2)
+            with c_col1:
+                coord_sala = st.selectbox("Sala para Bloquear/Intervalo", LISTA_SALAS, key="sala_coord")
+                coord_data = st.date_input("Data", key="data_coord")
+            with c_col2:
+                coord_turno = st.selectbox("Turno", ["Manhã", "Tarde", "Noite"], key="turno_coord")
+                # Intervalo geralmente é curto, input manual de hora
+                c_h1, c_h2 = st.columns(2)
+                coord_ini = c_h1.time_input("Início Intervalo", value=time(9,30))
+                coord_fim = c_h2.time_input("Fim Intervalo", value=time(9,50))
+            
+            st.caption("Nota: Este agendamento será salvo como 'INTERVALO' e aparecerá em destaque amarelo no relatório.")
+            
+            btn_coord = st.form_submit_button("Inserir Intervalo")
+            
+            if btn_coord:
+                df_check = carregar_dados()
+                # Verifica conflito (Intervalo também não pode bater com aula existente)
+                conflito, msg = verificar_conflito_sala(df_check, coord_sala, coord_data, coord_ini, coord_fim)
+                
+                if conflito:
+                    st.warning(f"⚠️ Atenção: Já existe aula neste horário ({msg}). Deseja forçar o intervalo?")
+                    st.checkbox("Forçar agendamento mesmo com conflito (Sobrepor)", key="force_intervalo")
+                    # Lógica de forçar seria complexa, vamos manter o bloqueio por segurança ou apenas avisar
+                    st.error("O sistema bloqueou para evitar duplicidade. Remova a aula existente primeiro se for um erro.")
+                else:
+                    # Salva no banco com dados fixos
+                    nova_linha_coord = [
+                        str(coord_data), coord_turno, "Intervalo", 
+                        str(coord_ini)[0:5], str(coord_fim)[0:5], 
+                        coord_sala, "INTERVALO", "COORDENAÇÃO", 
+                        str(datetime.now()), 0, 0
+                    ]
+                    sheet = conectar_google_sheets()
+                    sheet.append_row(nova_linha_coord)
+                    st.success("✅ Intervalo agendado com sucesso!")
+                    st.cache_data.clear()
