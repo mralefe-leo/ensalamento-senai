@@ -351,6 +351,8 @@ with tab2:
         else: st.info("Nenhum agendamento para os turnos selecionados.")
     else: st.info("Banco de dados vazio.")
 
+
+
 # --- TAB 3: ÁREA RESTRICTA (EDITAR INTERVALO) ---
 with tab3:
     st.header("Área Restrita da Coordenação - Definição de Intervalos")
@@ -387,12 +389,13 @@ with tab3:
             if aulas_dia.empty:
                 st.info("Não há aulas agendadas para esta data.")
             else:
-                # Cria uma lista de opções para o Selectbox: "Sala - Professor (Horario)"
-                # Precisamos salvar o índice original para saber qual linha editar
+                # --- CORREÇÃO DO ERRO AQUI ---
+                # Removemos o objeto 'row' (Pandas Series) de dentro do dicionário
                 opcoes_aulas = []
                 for index, row in aulas_dia.iterrows():
                     label = f"{row['sala']} | Prof. {row['professor']} ({row['hora_inicio']} - {row['hora_fim']})"
-                    opcoes_aulas.append({'label': label, 'index': index, 'dados': row})
+                    # Guardamos APENAS o label e o index. Removemos 'dados': row
+                    opcoes_aulas.append({'label': label, 'index': index})
                 
                 aula_selecionada = st.selectbox(
                     "Selecione a Aula:", 
@@ -400,6 +403,7 @@ with tab3:
                     format_func=lambda x: x['label']
                 )
                 
+                # Exibe qual aula está sendo editada
                 st.info(f"Definindo intervalo para: **{aula_selecionada['label']}**")
                 
                 with st.form("form_intervalo_update"):
@@ -416,27 +420,24 @@ with tab3:
                             
                             # O gspread usa index base 1. E a primeira linha é cabeçalho.
                             # Portanto: row_index (do pandas) + 2
-                            # (index 0 do pandas é a linha 2 do sheets)
                             linha_para_editar = aula_selecionada['index'] + 2
                             
-                            # Precisamos achar os números das colunas 'inicio_intervalo' e 'fim_intervalo'
-                            # Como adicionamos no final, podemos assumir ou buscar pelo header.
-                            # Maneira segura: Pegar todos os valores da linha 1 (cabeçalhos)
+                            # Busca colunas de intervalo
                             headers = sheet.row_values(1)
-                            # Normaliza headers
                             headers = [h.lower().strip() for h in headers]
                             
-                            col_idx_ini = headers.index('inicio_intervalo') + 1
-                            col_idx_fim = headers.index('fim_intervalo') + 1
+                            if 'inicio_intervalo' in headers and 'fim_intervalo' in headers:
+                                col_idx_ini = headers.index('inicio_intervalo') + 1
+                                col_idx_fim = headers.index('fim_intervalo') + 1
+                                
+                                # Atualiza as células
+                                sheet.update_cell(linha_para_editar, col_idx_ini, str(int_ini)[0:5])
+                                sheet.update_cell(linha_para_editar, col_idx_fim, str(int_fim)[0:5])
+                                
+                                st.success("✅ Intervalo atualizado com sucesso!")
+                                st.cache_data.clear() # Limpa cache para atualizar visualização
+                            else:
+                                st.error("ERRO: Colunas 'inicio_intervalo' e 'fim_intervalo' não encontradas. Adicione-as na planilha.")
                             
-                            # Atualiza as células
-                            sheet.update_cell(linha_para_editar, col_idx_ini, str(int_ini)[0:5])
-                            sheet.update_cell(linha_para_editar, col_idx_fim, str(int_fim)[0:5])
-                            
-                            st.success("✅ Intervalo atualizado com sucesso!")
-                            st.cache_data.clear()
-                            
-                        except ValueError:
-                            st.error("ERRO: Colunas 'inicio_intervalo' e 'fim_intervalo' não encontradas na planilha. Por favor, adicione-as manualmente no Google Sheets.")
                         except Exception as e:
                             st.error(f"Erro ao atualizar: {e}")
