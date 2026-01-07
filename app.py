@@ -6,7 +6,6 @@ from datetime import datetime, time
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import io
-import json # <--- IMPORTANTE: Adicionado para a conexão funcionar
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Gestão de Salas", layout="wide")
@@ -52,51 +51,40 @@ HORARIOS_TURNO = {
     "Noite": { "Turno Inteiro": (time(18, 0), time(22, 0)), "1º Horário": (time(18, 0), time(20, 0)), "2º Horário": (time(20, 0), time(22, 0)) }
 }
 
-# --- CONEXÃO COM GOOGLE SHEETS (UNIVERSAL E ROBUSTA) ---
+# --- CONEXÃO COM GOOGLE SHEETS (FORÇA BRUTA) ---
 @st.cache_resource
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    creds_dict = None
-    
-    # 1. Tenta pegar dos Segredos (Nuvem - Streamlit Cloud)
+    # 1. TENTA LER OS SEGREDOS DA NUVEM (Prioridade)
     if "gcp_service_account" in st.secrets:
         try:
-            # Verifica se está no formato TOML (Dicionário direto)
-            if isinstance(st.secrets["gcp_service_account"], dict):
-                creds_dict = dict(st.secrets["gcp_service_account"])
+            # Força a conversão para dicionário (Isso resolve o erro de não encontrar)
+            creds_dict = dict(st.secrets["gcp_service_account"])
             
-            # Verifica se está no formato JSON String (Backup)
-            elif "json_file" in st.secrets["gcp_service_account"]:
-                json_content = st.secrets["gcp_service_account"]["json_file"]
-                json_content = json_content.replace('\n', ' ') 
-                creds_dict = json.loads(json_content)
-                
-            # --- CORREÇÃO DA CHAVE PRIVADA ---
-            if creds_dict:
-                if "\\n" in creds_dict.get("private_key", ""):
-                    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-                
-                creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-                
+            # Corrige a chave privada se tiver quebras de linha de texto
+            if "private_key" in creds_dict:
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+            
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+            client = gspread.authorize(creds)
+            return client.open("sistema_ensalamento_db").sheet1
+            
         except Exception as e:
-            st.error(f"Erro ao processar segredos: {e}")
+            st.error(f"Erro ao ler Segredos: {e}")
             st.stop()
-    
-    # 2. Se não achou na nuvem, tenta arquivo local (PC)
-    if creds_dict is None:
-        try:
-            creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
-        except:
-            st.error("Credenciais não encontradas (Nem Segredos, nem Arquivo Local).")
-            st.stop()
-        
-    client = gspread.authorize(creds)
-    return client.open("sistema_ensalamento_db").sheet1 
+
+    # 2. SE FALHAR, TENTA ARQUIVO LOCAL
+    try:
+        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+        client = gspread.authorize(creds)
+        return client.open("sistema_ensalamento_db").sheet1
+    except:
+        st.error("⚠️ ERRO CRÍTICO: Credenciais não encontradas. Verifique se o Segredo 'gcp_service_account' está configurado no Streamlit Cloud.")
+        st.stop()
 
 # --- FUNÇÕES LÓGICAS ---
 def carregar_dados():
-    # MODIFICAÇÃO IMPORTANTE: Chama a conexão aqui dentro para evitar erro
     try:
         sheet = conectar_google_sheets()
         data = sheet.get_all_records()
@@ -111,18 +99,16 @@ def carregar_dados():
         if df.empty:
             return pd.DataFrame(columns=colunas_esperadas)
         
-        # Cria colunas faltantes e converte vazios para 0
         for col in colunas_esperadas:
             if col not in df.columns:
                 df[col] = 0 if 'qtd' in col else '-'
                 
-        # Garante que as colunas de quantidade sejam numéricas
         df['qtd_chromebooks'] = pd.to_numeric(df['qtd_chromebooks'], errors='coerce').fillna(0)
         df['qtd_notebooks'] = pd.to_numeric(df['qtd_notebooks'], errors='coerce').fillna(0)
                 
         return df
     except Exception as e:
-        st.error(f"Erro ao carregar dados: {e}")
+        # Se der erro aqui, retorna vazio mas não trava o app
         return pd.DataFrame()
 
 def verificar_conflito_sala(df, sala, data_agendamento, inicio_novo, fim_novo):
@@ -204,11 +190,9 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
 
     fig = plt.figure(figsize=(12, altura), dpi=300)
 
-    # ===== CABEÇALHO =====
     ax_header = fig.add_axes([0.04, 0.80, 0.92, 0.18])
     ax_header.axis("off")
 
-    # ===== LOGO – CANTO SUPERIOR ESQUERDO (GRANDE) =====
     try:
         logo = mpimg.imread("logo.png")
         ax_logo = fig.add_axes([0.04, 0.82, 0.28, 0.24])  
@@ -219,33 +203,13 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
 
     data_str = data_selecionada.strftime('%d/%m/%Y')
 
-    # TÍTULO CENTRALIZADO
-    ax_header.text(
-        0.55, 0.62,
-        "ENSALAMENTO DIÁRIO",
-        ha="center", va="center",
-        fontsize=18, fontweight="bold", color="#004587"
-    )
+    ax_header.text(0.55, 0.62, "ENSALAMENTO DIÁRIO", ha="center", va="center", fontsize=18, fontweight="bold", color="#004587")
+    ax_header.text(0.55, 0.30, f"Data: {data_str}", ha="center", va="center", fontsize=13, color="#555555")
 
-    ax_header.text(
-        0.55, 0.30,
-        f"Data: {data_str}",
-        ha="center", va="center",
-        fontsize=13, color="#555555"
-    )
-
-    # ===== TABELA =====
     ax_table = fig.add_axes([0.04, 0.05, 0.92, 0.70])
     ax_table.axis("off")
 
-    tabela = ax_table.table(
-        cellText=df.values,
-        colLabels=df.columns,
-        colWidths=col_widths,
-        loc="upper center",
-        cellLoc="center"
-    )
-
+    tabela = ax_table.table(cellText=df.values, colLabels=df.columns, colWidths=col_widths, loc="upper center", cellLoc="center")
     tabela.auto_set_font_size(False)
     tabela.set_fontsize(11)
     tabela.scale(1, 1.4)
@@ -253,21 +217,17 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     for (r, c), cell in tabela.get_celld().items():
         cell.set_edgecolor("#c0c0c0")
         cell.set_linewidth(0.5)
-
         if r == 0:
             cell.set_facecolor("#005CAA")
             cell.set_text_props(color="white", weight="bold")
         else:
             cell.set_facecolor("#f5f7fa" if r % 2 == 0 else "white")
 
-    # ===== EXPORTAÇÃO =====
     buf = io.BytesIO()
     plt.savefig(buf, format="png", dpi=300, pad_inches=0.2)
     buf.seek(0)
     plt.close(fig)
-
     return buf
-
 
 # --- INTERFACE ---
 with st.sidebar:
@@ -276,7 +236,6 @@ with st.sidebar:
     except: st.warning("Logo não encontrada")
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("---")
-    # Imagens decorativas (opcional)
     try:
         st.image("1.png", use_container_width=True)
         st.image("2.png", use_container_width=True)
@@ -308,11 +267,9 @@ with tab1:
         st.markdown("---")
         st.subheader("Recursos Móveis (Opcional)")
         st.info(f"Estoque Total: {TOTAL_CHROMEBOOKS} Chromebooks | {TOTAL_NOTEBOOKS} Notebooks")
-        
         col_r1, col_r2 = st.columns(2)
         qtd_chrome = col_r1.number_input("Qtd. Chromebooks", min_value=0, max_value=TOTAL_CHROMEBOOKS, step=1)
         qtd_note = col_r2.number_input("Qtd. Notebooks (Prof)", min_value=0, max_value=TOTAL_NOTEBOOKS, step=1)
-        
         st.markdown("---")
         btn_agendar = st.form_submit_button("💾 Salvar Agendamento", use_container_width=True)
 
@@ -320,13 +277,8 @@ with tab1:
             if not professor or not turma:
                 st.warning("⚠️ Preencha Professor e Turma.")
             else:
-                # MODIFICAÇÃO: Chama a conexão aqui antes de salvar
                 df_atual = carregar_dados()
-                
-                # 1. Verifica Sala
                 conflito_sala, msg_sala = verificar_conflito_sala(df_atual, sala, data, hora_inicio, hora_fim)
-                
-                # 2. Verifica Recursos (Chromebooks/Notes)
                 tem_recurso, msg_recurso = verificar_disponibilidade_recursos(df_atual, data, hora_inicio, hora_fim, qtd_chrome, qtd_note)
                 
                 if conflito_sala:
@@ -334,16 +286,9 @@ with tab1:
                 elif not tem_recurso:
                     st.error(f"❌ {msg_recurso}")
                 else:
-                    nova_linha = [
-                        str(data), turno, situacao, str(hora_inicio)[0:5], str(hora_fim)[0:5], 
-                        sala, professor, turma, str(datetime.now()),
-                        qtd_chrome, qtd_note 
-                    ]
-                    
-                    # Conecta para salvar
+                    nova_linha = [str(data), turno, situacao, str(hora_inicio)[0:5], str(hora_fim)[0:5], sala, professor, turma, str(datetime.now()), qtd_chrome, qtd_note]
                     sheet = conectar_google_sheets()
                     sheet.append_row(nova_linha)
-                    
                     st.success(f"✅ Agendado com Sucesso! (Recursos reservados: {qtd_chrome} Chromes, {qtd_note} Notes)")
                     st.cache_data.clear()
 
@@ -359,49 +304,29 @@ with tab2:
         df['data'] = df['data'].astype(str)
         df_view = df[df['data'] == str(filtro_data)]
         if filtro_turno != "Todos": df_view = df_view[df_view['turno'] == filtro_turno]
-        
         if not df_view.empty:
             df_view = df_view.sort_values(by='hora_inicio')
             
-            # Tabela na Tela (Mostra recursos se houver reserva)
-            # --- PERSONALIZAÇÃO DA TABELA ---
+            # --- PERSONALIZAÇÃO DA TABELA (COM SEUS NOMES) ---
             cols = ['hora_inicio', 'hora_fim', 'sala', 'professor', 'situacao', 'turma', 'qtd_chromebooks', 'qtd_notebooks']
-            
             df_visualizacao = df_view[cols].copy()
-            
             df_visualizacao.rename(columns={
-                'hora_inicio': 'Início',
-                'hora_fim': 'Fim',
-                'sala': 'Ambiente',
-                'professor': 'Docente',
-                'situacao': 'Detalhe',
-                'turma': 'Turma',
-                'qtd_chromebooks': 'Chromebooks',
-                'qtd_notebooks': 'Notebooks'
+                'hora_inicio': 'Início', 'hora_fim': 'Fim', 'sala': 'Ambiente', 
+                'professor': 'Docente', 'situacao': 'Detalhe', 'turma': 'Turma', 
+                'qtd_chromebooks': 'Chromebooks', 'qtd_notebooks': 'Notebooks'
             }, inplace=True)
             
-            st.dataframe(
-                df_visualizacao, 
-                use_container_width=True, 
-                hide_index=True,
-                column_config={
-                    "Início": st.column_config.TimeColumn(format="HH:mm"),
-                    "Fim": st.column_config.TimeColumn(format="HH:mm"),
-                }
-            )
-             # Botão de Download da Imagem
+            st.dataframe(df_visualizacao, use_container_width=True, hide_index=True, column_config={"Início": st.column_config.TimeColumn(format="HH:mm"), "Fim": st.column_config.TimeColumn(format="HH:mm")})
+            
             st.markdown("###")
             col_d1, col_d2 = st.columns([1, 4])
             with st.spinner("Gerando imagem HD..."):
                 imagem_buffer = gerar_imagem_ensalamento(df_view, filtro_data)
             col_d1.download_button("📥 Baixar Imagem", data=imagem_buffer, file_name=f"Ensalamento_{filtro_data}.png", mime="image/png")
             
-            # Resumo de Recursos Usados no dia
             total_c = df_view['qtd_chromebooks'].sum()
             total_n = df_view['qtd_notebooks'].sum()
             if total_c > 0 or total_n > 0:
-                st.caption(f"📊 Total reservado neste turno/dia: {total_c} Chromebooks e {total_n} Notebooks.")
-        else:
-            st.info("Nenhum agendamento.")
-    else:
-        st.info("Banco de dados vazio.")
+                st.caption(f"📊 Total reservado: {total_c} Chromebooks e {total_n} Notebooks.")
+        else: st.info("Nenhum agendamento.")
+    else: st.info("Banco de dados vazio.")
