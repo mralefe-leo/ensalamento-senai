@@ -45,10 +45,12 @@ LISTA_SALAS = sorted([
     "GALPÃO DE ENERGIA RENOVÁVEL 53", "SALA DE ACOLHIMENTO 60"
 ])
 
+# --- [ALTERAÇÃO 1] ADICIONADO O TURNO INTEGRAL ---
 HORARIOS_TURNO = {
     "Manhã": { "Turno Inteiro": (time(7, 0), time(12, 0)), "1º Horário": (time(7, 0), time(9, 30)), "2º Horário": (time(9, 30), time(12, 0)) },
     "Tarde": { "Turno Inteiro": (time(13, 0), time(17, 30)), "1º Horário": (time(13, 0), time(15, 15)), "2º Horário": (time(15, 15), time(17, 30)) },
-    "Noite": { "Turno Inteiro": (time(18, 0), time(22, 0)), "1º Horário": (time(18, 0), time(20, 0)), "2º Horário": (time(20, 0), time(22, 0)) }
+    "Noite": { "Turno Inteiro": (time(18, 0), time(22, 0)), "1º Horário": (time(18, 0), time(20, 0)), "2º Horário": (time(20, 0), time(22, 0)) },
+    "Integral": { "Turno Inteiro": (time(7, 0), time(17, 30)), "1º Horário": (time(7, 0), time(12, 0)), "2º Horário": (time(13, 0), time(17, 30)) }
 }
 
 # --- CONEXÃO COM GOOGLE SHEETS (FORÇA BRUTA) ---
@@ -123,6 +125,7 @@ def verificar_conflito_sala(df, sala, data_agendamento, inicio_novo, fim_novo):
             ini_exist = datetime.strptime(str_ini, "%H:%M").time()
             fim_exist = datetime.strptime(str_fim, "%H:%M").time()
             
+            # A lógica de tempo aqui JÁ resolve o conflito Integral vs Manhã/Tarde
             if (inicio_novo < fim_exist) and (fim_novo > ini_exist):
                 return True, f"Sala ocupada por {row['professor']} ({str_ini}-{str_fim})"
         except: continue
@@ -147,6 +150,7 @@ def verificar_disponibilidade_recursos(df, data_agendamento, inicio_novo, fim_no
             ini_exist = datetime.strptime(str_ini, "%H:%M").time()
             fim_exist = datetime.strptime(str_fim, "%H:%M").time()
             
+            # Se horários batem (Ex: Integral bate com Manhã), soma o uso
             if (inicio_novo < fim_exist) and (fim_novo > ini_exist):
                 chrome_em_uso += int(row['qtd_chromebooks'])
                 note_em_uso += int(row['qtd_notebooks'])
@@ -257,9 +261,17 @@ with tab1:
             sala = st.selectbox("Ambiente / Sala", LISTA_SALAS)
             data = st.date_input("Data da Aula")
         with col_b:
-            turno = st.selectbox("Turno", ["Manhã", "Tarde", "Noite"])
+            # --- [ALTERAÇÃO 2] ADICIONADO INTEGRAL NA LISTA ---
+            turno = st.selectbox("Turno", ["Manhã", "Tarde", "Noite", "Integral"])
+            
             situacao = st.radio("Ocupação do Turno", ["Turno Inteiro", "1º Horário", "2º Horário"], horizontal=True)
-            h_padrao_ini, h_padrao_fim = HORARIOS_TURNO[turno][situacao]
+            
+            # Tratamento de erro caso mude de turno e a situação não exista (embora todas tenham)
+            try:
+                h_padrao_ini, h_padrao_fim = HORARIOS_TURNO[turno][situacao]
+            except:
+                h_padrao_ini, h_padrao_fim = time(0,0), time(0,0)
+                
             col_h1, col_h2 = st.columns(2)
             hora_inicio = col_h1.time_input("Início", value=h_padrao_ini)
             hora_fim = col_h2.time_input("Fim", value=h_padrao_fim)
@@ -296,14 +308,23 @@ with tab2:
     st.subheader("Quadro de Horários")
     c1, c2, c3 = st.columns(3)
     filtro_data = c1.date_input("Filtrar Data", value=datetime.today())
-    filtro_turno = c2.selectbox("Filtrar Turno", ["Todos", "Manhã", "Tarde", "Noite"])
+    
+    # --- [ALTERAÇÃO 3] CORREÇÃO DO FILTRO (MULTISELECT) ---
+    # Pegamos todas as opções únicas do DataFrame + as opções padrão
+    opcoes_filtro = ["Manhã", "Tarde", "Noite", "Integral"]
+    filtro_turno = c2.multiselect("Filtrar Turno", options=opcoes_filtro, default=opcoes_filtro)
+    
     if c3.button("🔄 Atualizar"): st.cache_data.clear()
 
     df = carregar_dados()
     if not df.empty:
         df['data'] = df['data'].astype(str)
         df_view = df[df['data'] == str(filtro_data)]
-        if filtro_turno != "Todos": df_view = df_view[df_view['turno'] == filtro_turno]
+        
+        # Filtro corrigido usando .isin()
+        if filtro_turno:
+            df_view = df_view[df_view['turno'].isin(filtro_turno)]
+            
         if not df_view.empty:
             df_view = df_view.sort_values(by='hora_inicio')
             
@@ -328,5 +349,5 @@ with tab2:
             total_n = df_view['qtd_notebooks'].sum()
             if total_c > 0 or total_n > 0:
                 st.caption(f"Total reservado: {total_c} Chromebooks e {total_n} Notebooks.")
-        else: st.info("Nenhum agendamento.")
+        else: st.info("Nenhum agendamento para os turnos selecionados.")
     else: st.info("Banco de dados vazio.")
