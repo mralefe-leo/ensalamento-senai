@@ -180,7 +180,7 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     # --- DEFINIÇÃO DAS COLUNAS PARA A IMAGEM ---
     # Substituído hora_inicio/hora_fim pela 'situacao'
     # Adicionado qtd_chromebooks e qtd_notebooks
-    colunas = ['turno', 'situacao', 'sala', 'professor', 'turma', 'intervalo_fmt', 'qtd_chromebooks', 'qtd_notebooks']
+    colunas = ['turno', 'situacao', 'sala', 'professor', 'turma', 'intervalo_fmt']
     df_final = df_img[colunas].copy()
 
     df_final.rename(columns={
@@ -190,8 +190,7 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
         'professor': 'Docente',
         'turma': 'Turma',
         'intervalo_fmt': 'Intervalo',
-        'qtd_chromebooks': 'Chromes', # Abreviação para caber
-        'qtd_notebooks': 'Notes'      # Abreviação para caber
+ 
     }, inplace=True)
 
     # Ajuste das larguras (Soma deve ser próxima de 1.0)
