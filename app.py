@@ -43,26 +43,26 @@ HORARIOS_TURNO = {
 }
 
 # --- CONEXÃO COM GOOGLE SHEETS (HÍBRIDA) ---
+# --- CONEXÃO COM GOOGLE SHEETS (HÍBRIDA & CORRIGIDA) ---
 @st.cache_resource
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
     # Tenta conectar usando os Segredos da Nuvem (Streamlit Cloud)
     if "gcp_service_account" in st.secrets:
-        creds_dict = st.secrets["gcp_service_account"]
+        # CONVERTE PARA DICIONÁRIO E CORRIGE A CHAVE
+        # O erro asn1Spec acontece porque o '\n' vem como texto e não como "Enter"
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+        
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    
     # Se falhar, tenta conectar usando o arquivo local (Seu Computador)
     else:
         creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
         
     client = gspread.authorize(creds)
-    return client.open("sistema_ensalamento_db").sheet1 
-
-try:
-    sheet = conectar_google_sheets()
-except Exception as e:
-    st.error(f"Erro de Conexão: {e}")
-    st.stop()
+    return client.open("sistema_ensalamento_db").sheet1
 
 # --- FUNÇÕES LÓGICAS ---
 def carregar_dados():
