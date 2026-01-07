@@ -352,7 +352,7 @@ with tab2:
                 'hora_inicio': 'Início', 'hora_fim': 'Fim', 'situacao': 'Situação', 'turno': 'Turno', 'sala': 'Ambiente', 
                 'professor': 'Docente', 'turma': 'Turma', 
                 'inicio_intervalo': 'Ini. Intervalo', 'fim_intervalo': 'Fim Intervalo',
-                'qtd_chromebooks': 'Chromes', 'qtd_notebooks': 'Notes'
+                'qtd_chromebooks': 'Chromebooks', 'qtd_notebooks': 'Notebooks'
             }, inplace=True)
             
             st.dataframe(df_visualizacao, use_container_width=True, hide_index=True)
