@@ -88,7 +88,6 @@ def carregar_dados():
         if not df.empty:
             df.columns = df.columns.str.lower().str.strip()
 
-        # Adicionamos as novas colunas de intervalo na lista de esperadas
         colunas_esperadas = [
             'data', 'turno', 'situacao', 'hora_inicio', 'hora_fim', 
             'sala', 'professor', 'turma', 'data_registro',
@@ -100,7 +99,7 @@ def carregar_dados():
         
         for col in colunas_esperadas:
             if col not in df.columns:
-                df[col] = 0 if 'qtd' in col else '' # Default vazio para strings
+                df[col] = 0 if 'qtd' in col else ''
                 
         df['qtd_chromebooks'] = pd.to_numeric(df['qtd_chromebooks'], errors='coerce').fillna(0)
         df['qtd_notebooks'] = pd.to_numeric(df['qtd_notebooks'], errors='coerce').fillna(0)
@@ -163,11 +162,10 @@ def verificar_disponibilidade_recursos(df, data_agendamento, inicio_novo, fim_no
         
     return True, ""
 
-# --- GERADOR DE IMAGEM HD (COM COLUNA INTERVALO NA MESMA LINHA) ---
+# --- GERADOR DE IMAGEM HD (LAYOUT ATUALIZADO: SEM HORAS, COM SITUAÇÃO E RECURSOS) ---
 def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     plt.rcParams['font.family'] = 'DejaVu Sans'
 
-    # Cria uma coluna combinada para visualização do intervalo
     df_img = df_filtrado.copy()
     
     def formatar_intervalo(row):
@@ -179,26 +177,31 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
 
     df_img['intervalo_fmt'] = df_img.apply(formatar_intervalo, axis=1)
 
-    colunas = ['hora_inicio', 'hora_fim', 'turno', 'sala', 'professor', 'turma', 'intervalo_fmt']
+    # --- DEFINIÇÃO DAS COLUNAS PARA A IMAGEM ---
+    # Substituído hora_inicio/hora_fim pela 'situacao'
+    # Adicionado qtd_chromebooks e qtd_notebooks
+    colunas = ['turno', 'situacao', 'sala', 'professor', 'turma', 'intervalo_fmt', 'qtd_chromebooks', 'qtd_notebooks']
     df_final = df_img[colunas].copy()
 
     df_final.rename(columns={
-        'hora_inicio': 'Início',
-        'hora_fim': 'Fim',
         'turno': 'Turno',
+        'situacao': 'Horário/Situação', # Nome mais descritivo
         'sala': 'Ambiente',
         'professor': 'Docente',
         'turma': 'Turma',
-        'intervalo_fmt': 'Intervalo'
+        'intervalo_fmt': 'Intervalo',
+        'qtd_chromebooks': 'Chromes', # Abreviação para caber
+        'qtd_notebooks': 'Notes'      # Abreviação para caber
     }, inplace=True)
 
-    # Ajuste das larguras (Diminuimos um pouco as outras para caber o Intervalo)
-    col_widths = [0.08, 0.08, 0.08, 0.22, 0.18, 0.18, 0.18]
+    # Ajuste das larguras (Soma deve ser próxima de 1.0)
+    # Turno: 0.08 | Situação: 0.12 | Sala: 0.20 | Prof: 0.20 | Turma: 0.15 | Intervalo: 0.11 | Chromes: 0.07 | Notes: 0.07
+    col_widths = [0.08, 0.12, 0.20, 0.20, 0.15, 0.11, 0.07, 0.07]
 
     linhas = len(df_final)
     altura = 2.6 + linhas * 0.5
 
-    fig = plt.figure(figsize=(15, altura), dpi=300)
+    fig = plt.figure(figsize=(16, altura), dpi=300) # Aumentei largura para 16 para caber tudo
 
     ax_header = fig.add_axes([0.04, 0.80, 0.92, 0.18])
     ax_header.axis("off")
@@ -221,7 +224,7 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
 
     tabela = ax_table.table(cellText=df_final.values, colLabels=df_final.columns, colWidths=col_widths, loc="upper center", cellLoc="center")
     tabela.auto_set_font_size(False)
-    tabela.set_fontsize(10)
+    tabela.set_fontsize(9) # Fonte levemente menor para caber as 8 colunas
     tabela.scale(1, 1.4)
 
     for (r, c), cell in tabela.get_celld().items():
@@ -231,7 +234,17 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
             cell.set_facecolor("#005CAA")
             cell.set_text_props(color="white", weight="bold")
         else:
-            cell.set_facecolor("#f5f7fa" if r % 2 == 0 else "white")
+            # PINTURA DE INTERVALO
+            try:
+                # Docente agora é a coluna index 3 (0=Turno, 1=Sit, 2=Sala, 3=Prof...)
+                nome_professor = str(df_final.iloc[r-1]['Docente']).upper()
+                if "INTERVALO" in nome_professor:
+                    cell.set_facecolor("#FFFACD") # Amarelo Claro
+                    cell.set_text_props(weight='bold', color="#555")
+                else:
+                    cell.set_facecolor("#f5f7fa" if r % 2 == 0 else "white")
+            except:
+                cell.set_facecolor("white")
 
     buf = io.BytesIO()
     plt.savefig(buf, format="png", dpi=300, pad_inches=0.2)
@@ -302,14 +315,13 @@ with tab1:
                 elif not tem_recurso:
                     st.error(f"❌ {msg_recurso}")
                 else:
-                    # Salva sem intervalo inicialmente
                     nova_linha = [str(data), turno, situacao, str(hora_inicio)[0:5], str(hora_fim)[0:5], sala, professor, turma, str(datetime.now()), qtd_chrome, qtd_note, "", ""]
                     sheet = conectar_google_sheets()
                     sheet.append_row(nova_linha)
                     st.success(f"✅ Agendado com Sucesso!")
                     st.cache_data.clear()
 
-# --- TAB 2: VISUALIZAÇÃO ---
+# --- TAB 2: VISUALIZAÇÃO (ATUALIZADO) ---
 with tab2:
     st.subheader("Quadro de Horários")
     c1, c2, c3 = st.columns(3)
@@ -331,13 +343,16 @@ with tab2:
         if not df_view.empty:
             df_view = df_view.sort_values(by='hora_inicio')
             
-            # Formatação para exibir na tabela do site
-            cols = ['hora_inicio', 'hora_fim', 'turno', 'sala', 'professor', 'turma', 'inicio_intervalo', 'fim_intervalo']
+            # --- ATUALIZAÇÃO DA TABELA NA TELA ---
+            # Adicionado 'situacao', 'qtd_chromebooks', 'qtd_notebooks'
+            # Mantive hora_inicio/fim aqui pois na tela cabe e é útil para detalhes
+            cols = ['hora_inicio', 'hora_fim', 'situacao', 'turno', 'sala', 'professor', 'turma', 'inicio_intervalo', 'fim_intervalo', 'qtd_chromebooks', 'qtd_notebooks']
             df_visualizacao = df_view[cols].copy()
             df_visualizacao.rename(columns={
-                'hora_inicio': 'Início', 'hora_fim': 'Fim', 'turno': 'Turno', 'sala': 'Ambiente', 
+                'hora_inicio': 'Início', 'hora_fim': 'Fim', 'situacao': 'Situação', 'turno': 'Turno', 'sala': 'Ambiente', 
                 'professor': 'Docente', 'turma': 'Turma', 
-                'inicio_intervalo': 'Ini. Intervalo', 'fim_intervalo': 'Fim Intervalo'
+                'inicio_intervalo': 'Ini. Intervalo', 'fim_intervalo': 'Fim Intervalo',
+                'qtd_chromebooks': 'Chromes', 'qtd_notebooks': 'Notes'
             }, inplace=True)
             
             st.dataframe(df_visualizacao, use_container_width=True, hide_index=True)
@@ -348,12 +363,16 @@ with tab2:
                 imagem_buffer = gerar_imagem_ensalamento(df_view, filtro_data)
             col_d1.download_button("Baixar Relatorio (PNG)", data=imagem_buffer, file_name=f"Ensalamento_{filtro_data}.png", mime="image/png")
             
+            # Totalizadores simples no rodapé da tabela
+            total_c = df_view['qtd_chromebooks'].sum()
+            total_n = df_view['qtd_notebooks'].sum()
+            if total_c > 0 or total_n > 0:
+                st.caption(f"📊 Total Reservado no dia: {total_c} Chromebooks e {total_n} Notebooks.")
+
         else: st.info("Nenhum agendamento para os turnos selecionados.")
     else: st.info("Banco de dados vazio.")
 
-
-
-# --- TAB 3: ÁREA RESTRICTA (EDITAR INTERVALO) ---
+# --- TAB 3: ÁREA RESTRICTA (COORDENAÇÃO) ---
 with tab3:
     st.header("Área Restrita da Coordenação - Definição de Intervalos")
     
@@ -377,7 +396,6 @@ with tab3:
         st.markdown("---")
         st.subheader("Atribuir Intervalo à Aula Existente")
         
-        # 1. Selecionar Data para filtrar as aulas
         coord_data = st.date_input("Selecione a Data da Aula", key="data_coord_edit")
         
         df_coord = carregar_dados()
@@ -389,12 +407,9 @@ with tab3:
             if aulas_dia.empty:
                 st.info("Não há aulas agendadas para esta data.")
             else:
-                # --- CORREÇÃO DO ERRO AQUI ---
-                # Removemos o objeto 'row' (Pandas Series) de dentro do dicionário
                 opcoes_aulas = []
                 for index, row in aulas_dia.iterrows():
                     label = f"{row['sala']} | Prof. {row['professor']} ({row['hora_inicio']} - {row['hora_fim']})"
-                    # Guardamos APENAS o label e o index. Removemos 'dados': row
                     opcoes_aulas.append({'label': label, 'index': index})
                 
                 aula_selecionada = st.selectbox(
@@ -403,7 +418,6 @@ with tab3:
                     format_func=lambda x: x['label']
                 )
                 
-                # Exibe qual aula está sendo editada
                 st.info(f"Definindo intervalo para: **{aula_selecionada['label']}**")
                 
                 with st.form("form_intervalo_update"):
@@ -415,14 +429,9 @@ with tab3:
                     
                     if btn_save_interval:
                         try:
-                            # Conecta na planilha
                             sheet = conectar_google_sheets()
-                            
-                            # O gspread usa index base 1. E a primeira linha é cabeçalho.
-                            # Portanto: row_index (do pandas) + 2
                             linha_para_editar = aula_selecionada['index'] + 2
                             
-                            # Busca colunas de intervalo
                             headers = sheet.row_values(1)
                             headers = [h.lower().strip() for h in headers]
                             
@@ -430,12 +439,11 @@ with tab3:
                                 col_idx_ini = headers.index('inicio_intervalo') + 1
                                 col_idx_fim = headers.index('fim_intervalo') + 1
                                 
-                                # Atualiza as células
                                 sheet.update_cell(linha_para_editar, col_idx_ini, str(int_ini)[0:5])
                                 sheet.update_cell(linha_para_editar, col_idx_fim, str(int_fim)[0:5])
                                 
                                 st.success("✅ Intervalo atualizado com sucesso!")
-                                st.cache_data.clear() # Limpa cache para atualizar visualização
+                                st.cache_data.clear()
                             else:
                                 st.error("ERRO: Colunas 'inicio_intervalo' e 'fim_intervalo' não encontradas. Adicione-as na planilha.")
                             
