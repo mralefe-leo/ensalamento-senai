@@ -271,7 +271,7 @@ with tab1:
         qtd_chrome = col_r1.number_input("Qtd. Chromebooks", min_value=0, max_value=TOTAL_CHROMEBOOKS, step=1)
         qtd_note = col_r2.number_input("Qtd. Notebooks (Prof)", min_value=0, max_value=TOTAL_NOTEBOOKS, step=1)
         st.markdown("---")
-        btn_agendar = st.form_submit_button("💾 Salvar Agendamento", use_container_width=True)
+        btn_agendar = st.form_submit_button("Salvar Agendamento", use_container_width=True)
 
         if btn_agendar:
             if not professor or not turma:
