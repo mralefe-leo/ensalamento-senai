@@ -42,7 +42,6 @@ HORARIOS_TURNO = {
     "Noite": { "Completo": (time(18, 0), time(22, 0)), "1º Horário": (time(18, 0), time(20, 0)), "2º Horário": (time(20, 0), time(22, 0)) }
 }
 
-# --- CONEXÃO COM GOOGLE SHEETS (HÍBRIDA) ---
 # --- CONEXÃO COM GOOGLE SHEETS (HÍBRIDA & CORRIGIDA) ---
 @st.cache_resource
 def conectar_google_sheets():
@@ -51,7 +50,6 @@ def conectar_google_sheets():
     # Tenta conectar usando os Segredos da Nuvem (Streamlit Cloud)
     if "gcp_service_account" in st.secrets:
         # CONVERTE PARA DICIONÁRIO E CORRIGE A CHAVE
-        # O erro asn1Spec acontece porque o '\n' vem como texto e não como "Enter"
         creds_dict = dict(st.secrets["gcp_service_account"])
         creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
         
@@ -62,19 +60,29 @@ def conectar_google_sheets():
         creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
         
     client = gspread.authorize(creds)
-    return client.open("sistema_ensalamento_db").sheet1
+    return client.open("sistema_ensalamento_db").sheet1 
 
 # --- FUNÇÕES LÓGICAS ---
 def carregar_dados():
-    data = sheet.get_all_records()
-    df = pd.DataFrame(data)
-    colunas_esperadas = ['data', 'turno', 'situacao', 'hora_inicio', 'hora_fim', 'sala', 'professor', 'turma', 'data_registro', 'qtd_chromebooks', 'qtd_notebooks']
-    if df.empty: return pd.DataFrame(columns=colunas_esperadas)
-    for col in colunas_esperadas:
-        if col not in df.columns: df[col] = 0 if 'qtd' in col else '-'
-    df['qtd_chromebooks'] = pd.to_numeric(df['qtd_chromebooks'], errors='coerce').fillna(0)
-    df['qtd_notebooks'] = pd.to_numeric(df['qtd_notebooks'], errors='coerce').fillna(0)
-    return df
+    # CORREÇÃO: Chama a conexão AQUI dentro para não dar erro de variável inexistente
+    try:
+        sheet = conectar_google_sheets()
+        data = sheet.get_all_records()
+        df = pd.DataFrame(data)
+        
+        colunas_esperadas = ['data', 'turno', 'situacao', 'hora_inicio', 'hora_fim', 'sala', 'professor', 'turma', 'data_registro', 'qtd_chromebooks', 'qtd_notebooks']
+        
+        if df.empty: return pd.DataFrame(columns=colunas_esperadas)
+        
+        for col in colunas_esperadas:
+            if col not in df.columns: df[col] = 0 if 'qtd' in col else '-'
+            
+        df['qtd_chromebooks'] = pd.to_numeric(df['qtd_chromebooks'], errors='coerce').fillna(0)
+        df['qtd_notebooks'] = pd.to_numeric(df['qtd_notebooks'], errors='coerce').fillna(0)
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar dados: {e}")
+        return pd.DataFrame()
 
 def verificar_conflito_sala(df, sala, data_agendamento, inicio_novo, fim_novo):
     if df.empty: return False, ""
@@ -207,6 +215,7 @@ with tab1:
                 msg_placeholder.warning("⚠️ Preencha Professor e Turma.")
                 st.toast("Preencha os campos obrigatórios!", icon="⚠️")
             else:
+                # Carrega dados chamando a conexão diretamente
                 df_atual = carregar_dados()
                 conflito_sala, msg_sala = verificar_conflito_sala(df_atual, sala, data, hora_inicio, hora_fim)
                 tem_recurso, msg_recurso = verificar_disponibilidade_recursos(df_atual, data, hora_inicio, hora_fim, qtd_chrome, qtd_note)
@@ -218,7 +227,11 @@ with tab1:
                     st.toast("Recursos Insuficientes!", icon="💻")
                 else:
                     nova_linha = [str(data), turno, situacao, str(hora_inicio)[0:5], str(hora_fim)[0:5], sala, professor, turma, str(datetime.now()), qtd_chrome, qtd_note]
+                    
+                    # Conecta novamente apenas para garantir a gravação
+                    sheet = conectar_google_sheets()
                     sheet.append_row(nova_linha)
+                    
                     msg_placeholder.success(f"✅ Agendamento Confirmado! {professor} - {sala}")
                     st.toast("Salvo com sucesso!", icon="🎉")
                     st.cache_data.clear()
