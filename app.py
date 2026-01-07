@@ -43,47 +43,36 @@ HORARIOS_TURNO = {
     "Noite": { "Completo": (time(18, 0), time(22, 0)), "1º Horário": (time(18, 0), time(20, 0)), "2º Horário": (time(20, 0), time(22, 0)) }
 }
 
-# --- CONEXÃO COM GOOGLE SHEETS (UNIVERSAL) ---
+# --- CONEXÃO COM GOOGLE SHEETS (SIMPLIFICADA) ---
 @st.cache_resource
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    creds_dict = None
-    
-    # 1. Tenta pegar dos Segredos (Nuvem)
+    # 1. Tenta conectar usando os Segredos da Nuvem (Streamlit Cloud)
+    # Verifica se a chave principal existe nos segredos
     if "gcp_service_account" in st.secrets:
         try:
-            # Verifica se está no formato TOML (Dicionário direto)
-            if isinstance(st.secrets["gcp_service_account"], dict):
-                # Converte para dicionário padrão do Python (para poder editar)
-                creds_dict = dict(st.secrets["gcp_service_account"])
+            # Cria um dicionário a partir dos segredos
+            creds_dict = dict(st.secrets["gcp_service_account"])
             
-            # Verifica se está no formato JSON String (o que tentamos antes)
-            elif "json_file" in st.secrets["gcp_service_account"]:
-                import json
-                # Tenta ler limpando quebras de linha inválidas
-                json_content = st.secrets["gcp_service_account"]["json_file"]
-                # Remove quebras de linha reais que causam o erro "Control Character"
-                json_content = json_content.replace('\n', ' ') 
-                creds_dict = json.loads(json_content)
-                
-            # --- O PULO DO GATO: CORREÇÃO DA CHAVE PRIVADA ---
-            if creds_dict:
-                # Se a chave vier com \n literal (texto), converte para quebra de linha real
-                if "\\n" in creds_dict["private_key"]:
-                    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-                
-                # Cria as credenciais com o dicionário corrigido
-                creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-                
+            # CORREÇÃO CRÍTICA DA CHAVE:
+            # Se a chave privada tiver "\\n" (texto), troca por enter real "\n"
+            if "private_key" in creds_dict:
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+            
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         except Exception as e:
-            st.error(f"Erro ao processar segredos: {e}")
+            st.error(f"Erro ao ler Segredos do Streamlit: {e}")
             st.stop()
-    
-    # 2. Se não achou na nuvem, tenta arquivo local (PC)
-    if creds_dict is None:
-        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
-        
+            
+    # 2. Se não estiver na nuvem, tenta o arquivo local (Seu PC)
+    else:
+        try:
+            creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+        except FileNotFoundError:
+            st.error("Arquivo 'credentials.json' não encontrado e Segredos não configurados.")
+            st.stop()
+            
     client = gspread.authorize(creds)
     return client.open("sistema_ensalamento_db").sheet1
 
