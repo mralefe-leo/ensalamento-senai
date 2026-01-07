@@ -45,7 +45,6 @@ LISTA_SALAS = sorted([
     "GALPÃO DE ENERGIA RENOVÁVEL 53", "SALA DE ACOLHIMENTO 60"
 ])
 
-# --- [ALTERAÇÃO 1] ADICIONADO O TURNO INTEGRAL ---
 HORARIOS_TURNO = {
     "Manhã": { "Turno Inteiro": (time(7, 0), time(12, 0)), "1º Horário": (time(7, 0), time(9, 30)), "2º Horário": (time(9, 30), time(12, 0)) },
     "Tarde": { "Turno Inteiro": (time(13, 0), time(17, 30)), "1º Horário": (time(13, 0), time(15, 15)), "2º Horário": (time(15, 15), time(17, 30)) },
@@ -61,17 +60,13 @@ def conectar_google_sheets():
     # 1. TENTA LER OS SEGREDOS DA NUVEM (Prioridade)
     if "gcp_service_account" in st.secrets:
         try:
-            # Força a conversão para dicionário (Isso resolve o erro de não encontrar)
             creds_dict = dict(st.secrets["gcp_service_account"])
-            
-            # Corrige a chave privada se tiver quebras de linha de texto
             if "private_key" in creds_dict:
                 creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
             
             creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
             client = gspread.authorize(creds)
             return client.open("sistema_ensalamento_db").sheet1
-            
         except Exception as e:
             st.error(f"Erro ao ler Segredos: {e}")
             st.stop()
@@ -82,7 +77,7 @@ def conectar_google_sheets():
         client = gspread.authorize(creds)
         return client.open("sistema_ensalamento_db").sheet1
     except:
-        st.error("⚠️ ERRO CRÍTICO: Credenciais não encontradas. Verifique se o Segredo 'gcp_service_account' está configurado no Streamlit Cloud.")
+        st.error("⚠️ ERRO CRÍTICO: Credenciais não encontradas.")
         st.stop()
 
 # --- FUNÇÕES LÓGICAS ---
@@ -110,7 +105,6 @@ def carregar_dados():
                 
         return df
     except Exception as e:
-        # Se der erro aqui, retorna vazio mas não trava o app
         return pd.DataFrame()
 
 def verificar_conflito_sala(df, sala, data_agendamento, inicio_novo, fim_novo):
@@ -125,7 +119,6 @@ def verificar_conflito_sala(df, sala, data_agendamento, inicio_novo, fim_novo):
             ini_exist = datetime.strptime(str_ini, "%H:%M").time()
             fim_exist = datetime.strptime(str_fim, "%H:%M").time()
             
-            # A lógica de tempo aqui JÁ resolve o conflito Integral vs Manhã/Tarde
             if (inicio_novo < fim_exist) and (fim_novo > ini_exist):
                 return True, f"Sala ocupada por {row['professor']} ({str_ini}-{str_fim})"
         except: continue
@@ -134,7 +127,6 @@ def verificar_conflito_sala(df, sala, data_agendamento, inicio_novo, fim_novo):
 def verificar_disponibilidade_recursos(df, data_agendamento, inicio_novo, fim_novo, qtd_chrome, qtd_note):
     if qtd_chrome == 0 and qtd_note == 0:
         return True, ""
-        
     if df.empty: return True, ""
     
     df['data'] = df['data'].astype(str)
@@ -150,7 +142,6 @@ def verificar_disponibilidade_recursos(df, data_agendamento, inicio_novo, fim_no
             ini_exist = datetime.strptime(str_ini, "%H:%M").time()
             fim_exist = datetime.strptime(str_fim, "%H:%M").time()
             
-            # Se horários batem (Ex: Integral bate com Manhã), soma o uso
             if (inicio_novo < fim_exist) and (fim_novo > ini_exist):
                 chrome_em_uso += int(row['qtd_chromebooks'])
                 note_em_uso += int(row['qtd_notebooks'])
@@ -170,29 +161,32 @@ def verificar_disponibilidade_recursos(df, data_agendamento, inicio_novo, fim_no
         
     return True, ""
 
-# --- GERADOR DE IMAGEM HD (450 DPI) ---
+# --- GERADOR DE IMAGEM HD (ATUALIZADO COM TURNO) ---
 def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     plt.rcParams['font.family'] = 'DejaVu Sans'
 
-    # ===== TABELA =====
-    colunas = ['hora_inicio', 'hora_fim', 'sala', 'professor', 'turma', 'situacao']
+    # ADICIONADO 'turno' na lista de colunas
+    colunas = ['hora_inicio', 'hora_fim', 'turno', 'sala', 'professor', 'turma', 'situacao']
     df = df_filtrado[colunas].copy()
 
     df.rename(columns={
         'hora_inicio': 'Início',
         'hora_fim': 'Fim',
+        'turno': 'Turno',
         'sala': 'Ambiente',
         'professor': 'Docente',
         'turma': 'Turma',
         'situacao': 'Detalhe'
     }, inplace=True)
 
-    col_widths = [0.10, 0.10, 0.26, 0.22, 0.20, 0.12]
+    # Ajuste das larguras para caber a nova coluna 'Turno'
+    # Soma deve ser próxima de 1.0
+    col_widths = [0.08, 0.08, 0.10, 0.24, 0.20, 0.18, 0.12]
 
     linhas = len(df)
     altura = 2.6 + linhas * 0.5
 
-    fig = plt.figure(figsize=(12, altura), dpi=300)
+    fig = plt.figure(figsize=(14, altura), dpi=300) # Aumentei um pouco a largura da figura para 14
 
     ax_header = fig.add_axes([0.04, 0.80, 0.92, 0.18])
     ax_header.axis("off")
@@ -215,7 +209,7 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
 
     tabela = ax_table.table(cellText=df.values, colLabels=df.columns, colWidths=col_widths, loc="upper center", cellLoc="center")
     tabela.auto_set_font_size(False)
-    tabela.set_fontsize(11)
+    tabela.set_fontsize(10) # Reduzi levemente a fonte para caber tudo
     tabela.scale(1, 1.4)
 
     for (r, c), cell in tabela.get_celld().items():
@@ -261,12 +255,9 @@ with tab1:
             sala = st.selectbox("Ambiente / Sala", LISTA_SALAS)
             data = st.date_input("Data da Aula")
         with col_b:
-            # --- [ALTERAÇÃO 2] ADICIONADO INTEGRAL NA LISTA ---
             turno = st.selectbox("Turno", ["Manhã", "Tarde", "Noite", "Integral"])
-            
             situacao = st.radio("Ocupação do Turno", ["Turno Inteiro", "1º Horário", "2º Horário"], horizontal=True)
             
-            # Tratamento de erro caso mude de turno e a situação não exista (embora todas tenham)
             try:
                 h_padrao_ini, h_padrao_fim = HORARIOS_TURNO[turno][situacao]
             except:
@@ -309,8 +300,6 @@ with tab2:
     c1, c2, c3 = st.columns(3)
     filtro_data = c1.date_input("Filtrar Data", value=datetime.today())
     
-    # --- [ALTERAÇÃO 3] CORREÇÃO DO FILTRO (MULTISELECT) ---
-    # Pegamos todas as opções únicas do DataFrame + as opções padrão
     opcoes_filtro = ["Manhã", "Tarde", "Noite", "Integral"]
     filtro_turno = c2.multiselect("Filtrar Turno", options=opcoes_filtro, default=opcoes_filtro)
     
@@ -321,23 +310,25 @@ with tab2:
         df['data'] = df['data'].astype(str)
         df_view = df[df['data'] == str(filtro_data)]
         
-        # Filtro corrigido usando .isin()
         if filtro_turno:
             df_view = df_view[df_view['turno'].isin(filtro_turno)]
             
         if not df_view.empty:
             df_view = df_view.sort_values(by='hora_inicio')
             
-            # --- PERSONALIZAÇÃO DA TABELA (COM SEUS NOMES) ---
-            cols = ['hora_inicio', 'hora_fim', 'sala', 'professor', 'situacao', 'turma', 'qtd_chromebooks', 'qtd_notebooks']
+            # --- ATUALIZAÇÃO DA TABELA VISUAL (Adicionado 'turno') ---
+            cols = ['hora_inicio', 'hora_fim', 'turno', 'sala', 'professor', 'situacao', 'turma', 'qtd_chromebooks', 'qtd_notebooks']
             df_visualizacao = df_view[cols].copy()
             df_visualizacao.rename(columns={
-                'hora_inicio': 'Início', 'hora_fim': 'Fim', 'sala': 'Ambiente', 
+                'hora_inicio': 'Início', 'hora_fim': 'Fim', 'turno': 'Turno', 'sala': 'Ambiente', 
                 'professor': 'Docente', 'situacao': 'Detalhe', 'turma': 'Turma', 
                 'qtd_chromebooks': 'Chromebooks', 'qtd_notebooks': 'Notebooks'
             }, inplace=True)
             
-            st.dataframe(df_visualizacao, use_container_width=True, hide_index=True, column_config={"Início": st.column_config.TimeColumn(format="HH:mm"), "Fim": st.column_config.TimeColumn(format="HH:mm")})
+            st.dataframe(df_visualizacao, use_container_width=True, hide_index=True, column_config={
+                "Início": st.column_config.TimeColumn(format="HH:mm"), 
+                "Fim": st.column_config.TimeColumn(format="HH:mm")
+            })
             
             st.markdown("###")
             col_d1, col_d2 = st.columns([1, 4])
