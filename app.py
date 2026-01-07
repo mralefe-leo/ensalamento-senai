@@ -18,7 +18,7 @@ TOTAL_NOTEBOOKS = 11
 st.markdown("""
 <style>
 /* ===== SIDEBAR GERAL ===== */
-[data-testid="stSidebar"] { background-color: #d3d3d3; }
+[data-testid="stSidebar"] { background-color: #87cefa; }
 
 /* ===== DESKTOP ===== */
 @media (min-width: 769px) {
