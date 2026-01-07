@@ -245,7 +245,7 @@ with st.sidebar:
 st.title("Gestão de Salas")
 st.markdown("---")
 
-tab1, tab2 = st.tabs(["📝 Novo Agendamento", "📊 Visualizar Agenda"])
+tab1, tab2 = st.tabs(["Novo Agendamento", "Visualizar Agenda"])
 
 with tab1:
     with st.form("form_agendamento"):
@@ -293,7 +293,7 @@ with tab1:
                     st.cache_data.clear()
 
 with tab2:
-    st.subheader("📅 Quadro de Horários")
+    st.subheader("Quadro de Horários")
     c1, c2, c3 = st.columns(3)
     filtro_data = c1.date_input("Filtrar Data", value=datetime.today())
     filtro_turno = c2.selectbox("Filtrar Turno", ["Todos", "Manhã", "Tarde", "Noite"])
@@ -322,11 +322,11 @@ with tab2:
             col_d1, col_d2 = st.columns([1, 4])
             with st.spinner("Gerando imagem HD..."):
                 imagem_buffer = gerar_imagem_ensalamento(df_view, filtro_data)
-            col_d1.download_button("📥 Baixar Imagem", data=imagem_buffer, file_name=f"Ensalamento_{filtro_data}.png", mime="image/png")
+            col_d1.download_button("Baixar Relatorio (PNG)", data=imagem_buffer, file_name=f"Ensalamento_{filtro_data}.png", mime="image/png")
             
             total_c = df_view['qtd_chromebooks'].sum()
             total_n = df_view['qtd_notebooks'].sum()
             if total_c > 0 or total_n > 0:
-                st.caption(f"📊 Total reservado: {total_c} Chromebooks e {total_n} Notebooks.")
+                st.caption(f"Total reservado: {total_c} Chromebooks e {total_n} Notebooks.")
         else: st.info("Nenhum agendamento.")
     else: st.info("Banco de dados vazio.")
