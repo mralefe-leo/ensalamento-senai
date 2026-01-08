@@ -30,6 +30,17 @@ TOTAL_NOTEBOOKS = 11
 
 st.markdown("""
 <style>
+            /* Altera a cor do ícone de 'View fullscreen' para branco */
+    [data-testid="stImage"] button[title="View fullscreen"] svg {
+        fill: white !important;
+        stroke: white !important; /* Garante que a cor seja branca */
+    }
+    /* Altera a cor do ícone de 'Close' (fechar) no modal para branco */
+    button[title="Close"] svg {
+        fill: white !important;
+        stroke: white !important;
+    }
+            
     /* 1. LAYOUT */    
     /* Sobe o conteúdo para o topo */
     div.block-container {
