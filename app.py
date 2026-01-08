@@ -430,6 +430,8 @@ with tab2:
                     'hora_fim': 'Fim',
                     'situacao': 'Situação',
                     'sala': 'Ambiente',
+                    'professor': 'Professor',
+                    'turma': 'Turma',
                     'intervalo_tela': 'Intervalo', # <--- Nova coluna renomeada
                     'qtd_chromebooks': 'Chromebooks',
                     'qtd_notebooks': 'Notebooks'
