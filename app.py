@@ -30,119 +30,129 @@ TOTAL_NOTEBOOKS = 11
 
 st.markdown("""
 <style>
-            /* 1. SOBE O SISTEMA (Remove o espaço vazio gigante do topo) */
-div.block-container {
-    padding-top: 1.5rem !important; /* Reduz de ~6rem para 1.5rem */
-    padding-bottom: 2rem !important;
-    margin-top: 0 !important;
+    /* ============================================================
+       1. CORREÇÃO DE LAYOUT (Subir sistema e remover barras)
+       ============================================================ */
+    
+    /* Sobe o conteúdo para o topo */
+    div.block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 3rem !important;
+    }
+    
+    /* Remove o fundo do cabeçalho padrão */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
     }
 
-    /* 2. REMOVE A BARRA SUPERIOR DO STREAMLIT (Header transparente) */
-header[data-testid="stHeader"] {
-    background: transparent !important;
-    background-color: transparent !important;
+    /* Garante fundo transparente nas abas (Corrige bug do Dark Mode) */
+    .stTabs [data-baseweb="tab-list"], 
+    .stTabs [data-baseweb="tab"],
+    [data-baseweb="tab-panel"] {
+        background-color: transparent !important;
     }
 
-    /* 3. AJUSTE DO FUNDO DOS TABS (Evita a faixa branca no meio no Dark Mode) */
-[data-baseweb="tab-list"] {
-    background-color: transparent !important;
-}
-            
-/* Fonte base */
-html, body, [class*="css"] {
-    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-}
+    /* ============================================================
+       2. ESTILOS DO SEU TEMA (Cores Originais #2b78c5)
+       ============================================================ */
 
-/* Sidebar */
-[data-testid="stSidebar"] {
-    background: #2b78c5; /* Azul SENAI Escuro */
-}
-[data-testid="stSidebar"] * {
-    color: black !important;
-}
+    /* Fonte base */
+    html, body, [class*="css"] {
+        font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+    }
 
-/* Header principal */
-.header-senai {
-    background: #2b78c5;
-    padding: 24px 32px;
-    border-radius: 12px;
-    margin-bottom: 24px;
-    color: white;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-.header-senai h1 {
-    margin: 0;
-    font-size: 2.2rem;
-    font-weight: 700;
-}
-.header-senai p {
-    margin-top: 5px;
-    font-size: 1.1rem;
-    opacity: 0.9;
-}
+    /* Sidebar - Mantendo seu Azul e Texto Preto */
+    [data-testid="stSidebar"] {
+        background: #2b78c5; 
+    }
+    [data-testid="stSidebar"] * {
+        color: black !important; /* Mantido conforme seu código */
+    }
 
-/* Cards (Container branco com sombra) */
-.card {
-    background: white;
-    padding: 24px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    border: 1px solid #e0e0e0;
-    margin-bottom: 20px;
-}
+    /* Header Personalizado */
+    .header-senai {
+        background: #2b78c5;
+        padding: 24px 32px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .header-senai h1 { margin: 0; font-size: 2.2rem; font-weight: 700; }
+    .header-senai p { margin-top: 5px; font-size: 1.1rem; opacity: 0.9; }
 
-/* Ajuste de Botões */
-div.stButton > button {
-    background-color: #2b78c5; 
-    color: white;
-    border: none;
-    font-weight: bold;
-    width: 100%;
-    border-radius: 6px;
-    padding: 0.5rem 1rem;
-    transition: all 0.3s;
-}
-div.stButton > button:hover {
-    background-color: #e0e0e0;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    color: white;
-}
+    /* IMPORTANTE: Aqui aplicamos o estilo direto no FORMULÁRIO 
+       para substituir o antigo .card e funcionar no Dark Mode 
+    */
+    [data-testid="stForm"] {
+        background-color: var(--secondary-background-color); /* Adapta cor automaticamente */
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border: 1px solid rgba(128,128,128, 0.2);
+    }
 
-/* Tabelas */
-[data-testid="stDataFrame"] {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-}
+    /* Ajuste de Botões - Mantendo seu Azul */
+    div.stButton > button {
+        background-color: #2b78c5; 
+        color: white;
+        border: none;
+        font-weight: bold;
+        width: 100%;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        transition: all 0.3s;
+    }
+    div.stButton > button:hover {
+        background-color: #e0e0e0;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        color: #2b78c5; /* Texto azul no hover para leitura */
+    }
 
-/*    CONFIGURAÇÃO DAS TABS (ABAS)  */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 8px;
-}
+    /* Tabelas */
+    [data-testid="stDataFrame"] {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+    }
 
-.stTabs [data-baseweb="tab"] {
-    height: auto;
-    white-space: pre-wrap;
-    background-color: white;
+    /* CONFIGURAÇÃO DAS TABS (ABAS) */
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     
-    gap: 1px;
-    padding: 10px 25px; /* Mais espaçamento interno */
-    color: #2b78c5; /* Azul do seu tema */
-    
-    /* AQUI ESTÁ O CONTROLE DO TAMANHO DA FONTE */
-    font-size: 20px !important; 
-    font-weight: bold;
-    border: 1px solid #e0e0e0;
-    border-bottom: none;
-}
+    .stTabs [data-baseweb="tab"] {
+        height: auto;
+        white-space: pre-wrap;
+        background-color: transparent !important; /* Transparente para Dark Mode */
+        gap: 1px;
+        padding: 10px 25px;
+        color: #2b78c5;
+        font-size: 20px !important; 
+        font-weight: bold;
+        border: 1px solid rgba(128,128,128, 0.2);
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+    }
 
-/* Aba Selecionada (Ativa) */
-.stTabs [aria-selected="true"] {
-    background-color: #2b78c5 !important;
-    color: white !important;
-}
-            
-            
-            
+    /* Aba Selecionada */
+    .stTabs [aria-selected="true"] {
+        background-color: #2b78c5 !important;
+        color: white !important;
+    }
+
+    /* FIX BOTÃO IMAGEM (Mantendo o Vermelho apenas aqui para destaque, ou mude para azul se preferir) */
+    [data-testid="stSidebar"] [data-testid="stImage"] button {
+        background-color: white !important;
+        border: 2px solid #2b78c5 !important; /* Mudei para seu Azul */
+        border-radius: 50% !important;
+        width: 32px !important;
+        height: 32px !important;
+        opacity: 1 !important;
+    }
+    /* Ícone Azul */
+    [data-testid="stSidebar"] [data-testid="stImage"] button svg {
+        /* Filtro para gerar cor azul aproximada */
+        filter: invert(33%) sepia(99%) saturate(1637%) hue-rotate(193deg) brightness(91%) contrast(90%) !important;
+        transform: scale(0.9);
+    }
 </style>
 """, unsafe_allow_html=True)
 
