@@ -31,22 +31,22 @@ TOTAL_NOTEBOOKS = 11
 st.markdown("""
 <style>
             /* 1. SOBE O SISTEMA (Remove o espaço vazio gigante do topo) */
-    div.block-container {
-        padding-top: 1.5rem !important; /* Reduz de ~6rem para 1.5rem */
-        padding-bottom: 2rem !important;
-        margin-top: 0 !important;
+div.block-container {
+    padding-top: 1.5rem !important; /* Reduz de ~6rem para 1.5rem */
+    padding-bottom: 2rem !important;
+    margin-top: 0 !important;
     }
 
     /* 2. REMOVE A BARRA SUPERIOR DO STREAMLIT (Header transparente) */
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-        background-color: transparent !important;
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    background-color: transparent !important;
     }
 
     /* 3. AJUSTE DO FUNDO DOS TABS (Evita a faixa branca no meio no Dark Mode) */
-    [data-baseweb="tab-list"] {
-        background-color: transparent !important;
-    }
+[data-baseweb="tab-list"] {
+    background-color: transparent !important;
+}
             
 /* Fonte base */
 html, body, [class*="css"] {
@@ -363,7 +363,7 @@ tab1, tab2, tab3 = st.tabs(["Novo Agendamento", "Visualizar Agenda", "Coordenaç
 # TAB 1: AGENDAMENTO 
 
 with tab1:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
+    
     with st.form("form_agendamento"):
         st.subheader("Dados do Agendamento")
         c1, c2 = st.columns(2)
@@ -408,13 +408,13 @@ with tab1:
                     ])
                     st.success("✅ Agendado com sucesso!")
                     st.cache_data.clear()
-    st.markdown('</div>', unsafe_allow_html=True)
+    
 
 
 # TAB 2: VISUALIZAÇÃO (ATUALIZADO COM INTERVALO)
 
 with tab2:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
+    
     c1, c2, c3 = st.columns([1,2,1])
     filtro_data = c1.date_input("Data", datetime.today())
     filtro_turno = c2.multiselect("Turno", list(HORARIOS_TURNO.keys()), default=list(HORARIOS_TURNO.keys()))
@@ -464,7 +464,7 @@ with tab2:
             st.caption(f"Total Reservado: {df_view['qtd_chromebooks'].sum()} Chromebooks | {df_view['qtd_notebooks'].sum()} Notebooks")
         else:
             st.info("Nenhum agendamento encontrado.")
-    st.markdown('</div>', unsafe_allow_html=True)
+    
 
 
 # TAB 3: COORDENAÇÃO (COM SEGURANÇA NA PLANILHA)
