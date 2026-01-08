@@ -410,7 +410,7 @@ with tab2:
             # Tabela Visual
             cols_view = ['hora_inicio', 'hora_fim', 'situacao', 'sala', 'professor', 'turma', 'qtd_chromebooks', 'qtd_notebooks']
             st.dataframe(
-                df_view[cols_view].rename(columns={'hora_inicio':'Início','hora_fim':'Fim','sala':'Ambiente','qtd_chromebooks':'Chrome','qtd_notebooks':'Note'}),
+                df_view[cols_view].rename(columns={'hora_inicio':'Início','hora_fim':'Fim','sala':'Ambiente','qtd_chromebooks':'Chromebooks','qtd_notebooks':'Notebooks'}),
                 use_container_width=True, hide_index=True
             )
             
