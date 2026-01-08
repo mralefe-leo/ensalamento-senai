@@ -63,7 +63,7 @@ st.markdown("""
         background: #fffff; 
     }
     [data-testid="stSidebar"] * {
-        color: orange !important; /* Mantido conforme seu código */
+        color: #e94d16 !important; 
     }
 
     /* Header Personalizado */
@@ -78,9 +78,7 @@ st.markdown("""
     .header-senai h1 { margin: 0; font-size: 2.2rem; font-weight: 700; }
     .header-senai p { margin-top: 5px; font-size: 1.1rem; opacity: 0.9; }
 
-    /* IMPORTANTE: Aqui aplicamos o estilo direto no FORMULÁRIO 
-       para substituir o antigo .card e funcionar no Dark Mode 
-    */
+    
     [data-testid="stForm"] {
         background-color: var(--secondary-background-color); /* Adapta cor automaticamente */
         padding: 24px;
@@ -89,7 +87,7 @@ st.markdown("""
         border: 1px solid rgba(128,128,128, 0.2);
     }
 
-    /* Ajuste de Botões - Mantendo seu Azul */
+    /* Ajuste de Botões */
     div.stButton > button {
         background-color: #2b78c5; 
         color: white;
@@ -103,7 +101,7 @@ st.markdown("""
     div.stButton > button:hover {
         background-color: #e0e0e0;
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        color: #2b78c5; /* Texto azul no hover para leitura */
+        color: #2b78c5; 
     }
 
     /* Tabelas */
@@ -118,7 +116,7 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] {
         height: auto;
         white-space: pre-wrap;
-        background-color: transparent !important; /* Transparente para Dark Mode */
+        background-color: transparent !important; 
         gap: 1px;
         padding: 10px 25px;
         color: #2b78c5;
