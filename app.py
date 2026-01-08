@@ -480,7 +480,7 @@ with tab3:
             df_c['data'] = df_c['data'].astype(str)
             aulas = df_c[df_c['data'] == str(d_edit)]
             if not aulas.empty:
-                opcoes = {f"{r['sala']} | {r['professor']} ({r['hora_inicio']})": i for i, r in aulas.iterrows()}
+                opcoes = {f"{r['sala']} | {r['professor']} ({r['hora_inicio']}) ({r['hora_fim']}) ": i for i, r in aulas.iterrows()}
                 escolha = st.selectbox("Selecione a aula:", list(opcoes.keys()))
                 
                 with st.form("edit_int"):
