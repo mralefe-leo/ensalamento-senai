@@ -30,10 +30,7 @@ TOTAL_NOTEBOOKS = 11
 
 st.markdown("""
 <style>
-    /* ============================================================
-       1. CORREÇÃO DE LAYOUT (Subir sistema e remover barras)
-       ============================================================ */
-    
+    /* 1. LAYOUT */    
     /* Sobe o conteúdo para o topo */
     div.block-container {
         padding-top: 2rem !important;
@@ -45,16 +42,14 @@ st.markdown("""
         background: transparent !important;
     }
 
-    /* Garante fundo transparente nas abas (Corrige bug do Dark Mode) */
+    /* Garante fundo transparente nas abas */
     .stTabs [data-baseweb="tab-list"], 
     .stTabs [data-baseweb="tab"],
     [data-baseweb="tab-panel"] {
         background-color: transparent !important;
     }
 
-    /* ============================================================
-       2. ESTILOS DO SEU TEMA (Cores Originais #2b78c5)
-       ============================================================ */
+    /* 2. ESTILOS DO SEU TEMA */
 
     /* Fonte base */
     html, body, [class*="css"] {
@@ -63,7 +58,7 @@ st.markdown("""
 
     /* Sidebar - Mantendo seu Azul e Texto Preto */
     [data-testid="stSidebar"] {
-        background: #2b78c5; 
+        background: #fffff; 
     }
     [data-testid="stSidebar"] * {
         color: black !important; /* Mantido conforme seu código */
