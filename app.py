@@ -30,6 +30,23 @@ TOTAL_NOTEBOOKS = 11
 
 st.markdown("""
 <style>
+            /* 1. SOBE O SISTEMA (Remove o espaço vazio gigante do topo) */
+    div.block-container {
+        padding-top: 1.5rem !important; /* Reduz de ~6rem para 1.5rem */
+        padding-bottom: 2rem !important;
+        margin-top: 0 !important;
+    }
+
+    /* 2. REMOVE A BARRA SUPERIOR DO STREAMLIT (Header transparente) */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+
+    /* 3. AJUSTE DO FUNDO DOS TABS (Evita a faixa branca no meio no Dark Mode) */
+    [data-baseweb="tab-list"] {
+        background-color: transparent !important;
+    }
             
 /* Fonte base */
 html, body, [class*="css"] {
