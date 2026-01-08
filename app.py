@@ -229,21 +229,39 @@ def verificar_conflito_sala(df, sala, data_agendamento, inicio_novo, fim_novo):
 def verificar_disponibilidade_recursos(df, data_agendamento, inicio_novo, fim_novo, qtd_chrome, qtd_note):
     if qtd_chrome == 0 and qtd_note == 0: return True, ""
     if df.empty: return True, ""
+    
     df['data'] = df['data'].astype(str)
     agendamentos = df[df['data'] == str(data_agendamento)]
     chrome_uso, note_uso = 0, 0
+    
+    # Calcula o uso total naquele horário
     for _, row in agendamentos.iterrows():
         try:
             str_ini, str_fim = str(row['hora_inicio'])[:5], str(row['hora_fim'])[:5]
             ini_exist = datetime.strptime(str_ini, "%H:%M").time()
             fim_exist = datetime.strptime(str_fim, "%H:%M").time()
+            
+            # Se houver intersecção de horário, soma o uso
             if (inicio_novo < fim_exist) and (fim_novo > ini_exist):
                 chrome_uso += int(row['qtd_chromebooks'])
                 note_uso += int(row['qtd_notebooks'])
         except: continue
     
-    if qtd_chrome > (TOTAL_CHROMEBOOKS - chrome_uso): return False, f"Falta Chromebooks (Disp: {TOTAL_CHROMEBOOKS - chrome_uso})"
-    if qtd_note > (TOTAL_NOTEBOOKS - note_uso): return False, f"Falta Notebooks (Disp: {TOTAL_NOTEBOOKS - note_uso})"
+    # --- NOVA LÓGICA DE ACUMULAÇÃO DE ERROS ---
+    erros_estoque = []
+    
+    saldo_chrome = TOTAL_CHROMEBOOKS - chrome_uso
+    if qtd_chrome > saldo_chrome:
+        erros_estoque.append(f"- Chromebooks: Pedido {qtd_chrome} | Disp: {saldo_chrome}")
+        
+    saldo_note = TOTAL_NOTEBOOKS - note_uso
+    if qtd_note > saldo_note:
+        erros_estoque.append(f"- Notebooks: Pedido {qtd_note} | Disp: {saldo_note}")
+        
+    # Se a lista de erros não estiver vazia, retorna False e junta as mensagens
+    if len(erros_estoque) > 0:
+        return False, "\n".join(erros_estoque)
+        
     return True, ""
 
 def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
@@ -400,12 +418,23 @@ with tab1:
                 st.warning("Preencha Professor e Turma.")
             else:
                 df_check = carregar_dados()
+                
+                # Executa AMBAS as verificações antes de decidir
                 conflito, msg_c = verificar_conflito_sala(df_check, sala, data, hora_inicio, hora_fim)
                 recurso_ok, msg_r = verificar_disponibilidade_recursos(df_check, data, hora_inicio, hora_fim, qtd_chrome, qtd_note)
                 
-                if conflito: st.error(f"❌ {msg_c}")
-                elif not recurso_ok: st.error(f"❌ {msg_r}")
+                # Se houver QUALQUER impedimento (Sala OU Recurso), exibe os erros
+                if conflito or not recurso_ok:
+                    if conflito: 
+                        st.error(f"❌ {msg_c}")
+                    
+                    if not recurso_ok:
+                        # O container ajuda a dar destaque visual se tiver mais de um item
+                        with st.container():
+                            st.error(f"❌ Indisponibilidade de Recursos:\n{msg_r}")
+                
                 else:
+                    # Se não houve nenhum erro, salva na planilha
                     sheet = conectar_google_sheets()
                     sheet.append_row([
                         str(data), turno, situacao, str(hora_inicio)[:5], str(hora_fim)[:5],
