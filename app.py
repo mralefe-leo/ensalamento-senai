@@ -394,6 +394,9 @@ with tab1:
 # =====================================================
 # TAB 2: VISUALIZAÇÃO (COM FILTROS E PNG RESTAURADOS)
 # =====================================================
+# =====================================================
+# TAB 2: VISUALIZAÇÃO (ATUALIZADO COM INTERVALO)
+# =====================================================
 with tab2:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     c1, c2, c3 = st.columns([1,2,1])
@@ -404,13 +407,33 @@ with tab2:
     df = carregar_dados()
     if not df.empty:
         df['data'] = df['data'].astype(str)
+        # Filtra os dados
         df_view = df[(df['data'] == str(filtro_data)) & (df['turno'].isin(filtro_turno))].sort_values('hora_inicio')
         
         if not df_view.empty:
-            # Tabela Visual
-            cols_view = ['hora_inicio', 'hora_fim', 'situacao', 'sala', 'professor', 'turma', 'qtd_chromebooks', 'qtd_notebooks']
+            # --- LÓGICA NOVA: CRIAR A COLUNA FORMATADA ---
+            # Verifica se existe intervalo e formata "Inicio-Fim", senão coloca "-"
+            df_view['intervalo_tela'] = df_view.apply(
+                lambda r: f"{str(r['inicio_intervalo'])}-{str(r['fim_intervalo'])}" 
+                if r['inicio_intervalo'] and str(r['inicio_intervalo']).strip() != "" 
+                else "-", 
+                axis=1
+            )
+
+            # Define as colunas que vão aparecer (agora com intervalo_tela)
+            cols_view = ['hora_inicio', 'hora_fim', 'situacao', 'sala', 'professor', 'turma', 'intervalo_tela', 'qtd_chromebooks', 'qtd_notebooks']
+            
+            # Exibe a tabela renomeando as colunas para ficar bonito
             st.dataframe(
-                df_view[cols_view].rename(columns={'hora_inicio':'Início','hora_fim':'Fim','sala':'Ambiente','qtd_chromebooks':'Chromebooks','qtd_notebooks':'Notebooks'}),
+                df_view[cols_view].rename(columns={
+                    'hora_inicio': 'Início',
+                    'hora_fim': 'Fim',
+                    'situacao': 'Situação',
+                    'sala': 'Ambiente',
+                    'intervalo_tela': 'Intervalo', # <--- Nova coluna renomeada
+                    'qtd_chromebooks': 'Chromebooks',
+                    'qtd_notebooks': 'Notebooks'
+                }),
                 use_container_width=True, hide_index=True
             )
             
