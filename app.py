@@ -236,8 +236,8 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
         'professor': 'Docente',
         'turma': 'Turma',
         'intervalo_fmt': 'Intervalo',
-        'qtd_chromebooks': 'Chromes',
-        'qtd_notebooks': 'Notes'
+        'qtd_chromebooks': 'Chromebooks',
+        'qtd_notebooks': 'Notebooks'
     }
 
     cols_to_use = [c for c in colunas_map.keys() if c in df_img.columns]
