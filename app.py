@@ -281,7 +281,11 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     ax_logo.axis('off')
     try:
         logo = mpimg.imread("logo.png")
-        ax_logo.imshow(logo)
+        ax_logo.imshow(
+        logo,
+        extent=[0.02, 0.18, 0.15, 0.85],  # ← CONTROLE DE TAMANHO
+        aspect='auto'
+    )
     except:
         ax_logo.text(0.5, 0.5, "SENAI", fontsize=22, ha="center", va="center")
 
