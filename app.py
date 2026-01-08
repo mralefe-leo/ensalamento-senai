@@ -30,12 +30,11 @@ TOTAL_NOTEBOOKS = 11
 
 st.markdown("""
 <style>
-     
-            
+                
     /* 1. LAYOUT */    
     /* Sobe o conteúdo para o topo */
     div.block-container {
-        padding-top: 2rem !important;
+        padding-top: 1rem !important;  /* <--- MUDE PARA 1rem (ou 0.5rem se quiser colar no teto) */
         padding-bottom: 3rem !important;
     }
     
@@ -531,7 +530,7 @@ with tab3:
         col1, col2, col3 = st.columns([1,1,1])
   
         with col2:
-            st.markdown('<div class="login-box">', unsafe_allow_html=True)
+            
             st.markdown("### Acesso Restrito")
             pwd = st.text_input("Senha", type="password", label_visibility="collapsed")
             
@@ -548,9 +547,9 @@ with tab3:
                     st.rerun()
                 else: 
                     st.error("Senha incorreta")
-            st.markdown('</div>', unsafe_allow_html=True)
+            
     else:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+        
         c_head1, c_head2 = st.columns([4,1])
         c_head1.subheader("Gestão de Intervalos")
         if c_head2.button("Sair"): st.session_state['coord_logado'] = False; st.rerun()
@@ -583,4 +582,4 @@ with tab3:
                             st.cache_data.clear()
                         except: st.error("Colunas de intervalo não encontradas na planilha.")
             else: st.info("Sem aulas nesta data.")
-        st.markdown('</div>', unsafe_allow_html=True)
+        
