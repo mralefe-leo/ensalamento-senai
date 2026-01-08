@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import io
 
-# =====================================================
+
 # CONFIGURAÇÃO DA PÁGINA
-# =====================================================
+
 st.set_page_config(
     page_title="Gestão de Salas | SENAI",
     page_icon="logo.png",
@@ -19,15 +19,15 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# =====================================================
+
 # CONSTANTES DE ESTOQUE
-# =====================================================
+
 TOTAL_CHROMEBOOKS = 34
 TOTAL_NOTEBOOKS = 11
 
-# =====================================================
+
 # CSS – IDENTIDADE VISUAL SENAI
-# =====================================================
+
 st.markdown("""
 <style>
             
@@ -129,9 +129,9 @@ div.stButton > button:hover {
 </style>
 """, unsafe_allow_html=True)
 
-# =====================================================
+
 # LISTAS DE DADOS
-# =====================================================
+
 LISTA_SALAS = sorted([
     "SALA DE AULA 24","SALA DE AULA 25","SALA DE AULA 49","SALA DE AULA 55",
     "SALA DE AULA 56","SALA DE AULA 61","SALA DE AULA 62","SALA DE AULA 63",
@@ -149,9 +149,9 @@ HORARIOS_TURNO = {
     "Integral": { "Turno Inteiro": (time(7,0), time(17,30)), "1º Horário": (time(7,0), time(12,0)), "2º Horário": (time(13,0), time(17,30)) }
 }
 
-# =====================================================
+
 # CONEXÃO E DADOS
-# =====================================================
+
 @st.cache_resource
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -185,9 +185,9 @@ def carregar_dados():
         return df
     except: return pd.DataFrame()
 
-# =====================================================
-# LÓGICA DE NEGÓCIO (ESSENCIAL - RESTAURADA)
-# =====================================================
+
+# LÓGICA DE NEGÓCIO
+
 def verificar_conflito_sala(df, sala, data_agendamento, inicio_novo, fim_novo):
     if df.empty: return False, ""
     df['data'] = df['data'].astype(str)
@@ -249,9 +249,9 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     linhas = len(df_final) + 6
     fig = plt.figure(figsize=(16, max(6, 2.5 + len(df_final) * 0.55)), dpi=300)
 
-    # ============================
+    
     #  BLOCO 1 – LOGO CENTRALIZADA
-    # ============================
+    
     ax_logo = fig.add_axes([0, 0.80, 1, 0.18])
 
     ax_logo.axis('off')
@@ -261,17 +261,17 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     except:
         ax_logo.text(0.5, 0.5, "SENAI", fontsize=22, ha="center", va="center")
 
-    # ============================
+    
     #  BLOCO 2 – TÍTULO
-    # ============================
+   
     ax_titulo = fig.add_axes([0, 0.74, 1, 0.08])
     ax_titulo.axis('off')
     ax_titulo.text(0.5, 0.5, "ENSALAMENTO DIÁRIO", fontsize=18, fontweight="bold",
                    ha="center", va="center", color="#004587")
 
-    # ============================
+   
     #  BLOCO 3 – DATA
-    # ============================
+    
     ax_data = fig.add_axes([0, 0.68, 1, 0.06])
     ax_data.axis('off')
     ax_data.text(0.5, 0.5,
@@ -279,9 +279,9 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
                  fontsize=12,
                  ha="center", va="center", color="#444")
 
-    # ============================
+    
     #  BLOCO 4 – TABELA
-    # ============================
+    
     ax_tab = fig.add_axes([0.03, 0.05, 0.94, 0.60])
     ax_tab.axis('off')
 
@@ -306,7 +306,7 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
         else:
             cell.set_facecolor("#F7F9FC" if r % 2 == 0 else "white")
 
-    # SALVAR EM MEMÓRIA
+    
     buf = io.BytesIO()
     plt.savefig(buf, format="png", bbox_inches="tight")
     buf.seek(0)
@@ -315,9 +315,9 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     return buf
 
 
-# =====================================================
+
 # INTERFACE SIDEBAR
-# =====================================================
+
 with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
     try: st.image("logo.png", use_container_width=True)
@@ -330,9 +330,9 @@ with st.sidebar:
     except: pass
     st.caption("Sistema de Gestão v1.0")
 
-# =====================================================
+
 # HEADER
-# =====================================================
+
 st.markdown("""
 <div class="header-senai">
     <h1>Gestão de Salas</h1>
@@ -342,9 +342,9 @@ st.markdown("""
 
 tab1, tab2, tab3 = st.tabs(["Novo Agendamento", "Visualizar Agenda", "Coordenação"])
 
-# =====================================================
-# TAB 1: AGENDAMENTO (COM LÓGICA RESTAURADA)
-# =====================================================
+
+# TAB 1: AGENDAMENTO 
+
 with tab1:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     with st.form("form_agendamento"):
@@ -393,12 +393,9 @@ with tab1:
                     st.cache_data.clear()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# =====================================================
-# TAB 2: VISUALIZAÇÃO (COM FILTROS E PNG RESTAURADOS)
-# =====================================================
-# =====================================================
+
 # TAB 2: VISUALIZAÇÃO (ATUALIZADO COM INTERVALO)
-# =====================================================
+
 with tab2:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     c1, c2, c3 = st.columns([1,2,1])
@@ -409,12 +406,11 @@ with tab2:
     df = carregar_dados()
     if not df.empty:
         df['data'] = df['data'].astype(str)
-        # Filtra os dados
+        
         df_view = df[(df['data'] == str(filtro_data)) & (df['turno'].isin(filtro_turno))].sort_values('hora_inicio')
         
         if not df_view.empty:
-            # --- LÓGICA NOVA: CRIAR A COLUNA FORMATADA ---
-            # Verifica se existe intervalo e formata "Inicio-Fim", senão coloca "-"
+                       
             df_view['intervalo_tela'] = df_view.apply(
                 lambda r: f"{str(r['inicio_intervalo'])}-{str(r['fim_intervalo'])}" 
                 if r['inicio_intervalo'] and str(r['inicio_intervalo']).strip() != "" 
@@ -422,10 +418,10 @@ with tab2:
                 axis=1
             )
 
-            # Define as colunas que vão aparecer (agora com intervalo_tela)
+            
             cols_view = ['hora_inicio', 'hora_fim', 'situacao', 'sala', 'professor', 'turma', 'intervalo_tela', 'qtd_chromebooks', 'qtd_notebooks']
             
-            # Exibe a tabela renomeando as colunas para ficar bonito
+           
             st.dataframe(
                 df_view[cols_view].rename(columns={
                     'hora_inicio': 'Início',
@@ -434,41 +430,41 @@ with tab2:
                     'sala': 'Ambiente',
                     'professor': 'Professor',
                     'turma': 'Turma',
-                    'intervalo_tela': 'Intervalo', # <--- Nova coluna renomeada
+                    'intervalo_tela': 'Intervalo', 
                     'qtd_chromebooks': 'Chromebooks',
                     'qtd_notebooks': 'Notebooks'
                 }),
                 use_container_width=True, hide_index=True
             )
             
-            # Botão PNG
+         
             st.markdown("###")
             col_d1, _ = st.columns([1,3])
             buf = gerar_imagem_ensalamento(df_view, filtro_data)
             col_d1.download_button("📥 Baixar Relatório (PNG)", data=buf, file_name=f"Ensalamento_{filtro_data}.png", mime="image/png")
             
-            # Totais
+        
             st.caption(f"Total Reservado: {df_view['qtd_chromebooks'].sum()} Chromebooks | {df_view['qtd_notebooks'].sum()} Notebooks")
         else:
             st.info("Nenhum agendamento encontrado.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# =====================================================
+
 # TAB 3: COORDENAÇÃO (COM SEGURANÇA NA PLANILHA)
-# =====================================================
+
 with tab3:
     if 'coord_logado' not in st.session_state: st.session_state['coord_logado'] = False
     
     if not st.session_state['coord_logado']:
         col1, col2, col3 = st.columns([1,1,1])
-        # ... (dentro da Tab 3) ...
+  
         with col2:
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
             st.markdown("### Acesso Restrito")
             pwd = st.text_input("Senha", type="password", label_visibility="collapsed")
             
             if st.button("Entrar"):
-                # Tenta buscar a senha dos segredos, se não existir, usa uma genérica ou avisa erro
+                
                 try:
                     senha_secreta = st.secrets["senha_coordenacao"]
                 except:
@@ -502,9 +498,9 @@ with tab3:
                     n_ini = ci1.time_input("Início Intervalo", time(9,30))
                     n_fim = ci2.time_input("Fim Intervalo", time(9,50))
                     if st.form_submit_button("Salvar Intervalo"):
-                        idx_real = opcoes[escolha] + 2 # +2 pois gspread é base-1 e tem header
+                        idx_real = opcoes[escolha] + 2 
                         sheet = conectar_google_sheets()
-                        # Busca dinâmica de colunas para não quebrar se mudar a ordem
+                        
                         headers = [h.lower().strip() for h in sheet.row_values(1)]
                         try:
                             c_ini = headers.index('inicio_intervalo') + 1
