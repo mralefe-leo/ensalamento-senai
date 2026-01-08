@@ -252,11 +252,11 @@ def verificar_disponibilidade_recursos(df, data_agendamento, inicio_novo, fim_no
     
     saldo_chrome = TOTAL_CHROMEBOOKS - chrome_uso
     if qtd_chrome > saldo_chrome:
-        erros_estoque.append(f"- Chromebooks: Pedido {qtd_chrome} | Disp: {saldo_chrome}")
+        erros_estoque.append(f"- Chromebooks: Pedido {qtd_chrome} | Disponível: {saldo_chrome}")
         
     saldo_note = TOTAL_NOTEBOOKS - note_uso
     if qtd_note > saldo_note:
-        erros_estoque.append(f"- Notebooks: Pedido {qtd_note} | Disp: {saldo_note}")
+        erros_estoque.append(f"- Notebooks: Pedido {qtd_note} | Disponível: {saldo_note}")
         
     # Se a lista de erros não estiver vazia, retorna False e junta as mensagens
     if len(erros_estoque) > 0:
