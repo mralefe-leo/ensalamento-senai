@@ -30,11 +30,12 @@ TOTAL_NOTEBOOKS = 11
 
 st.markdown("""
 <style>
-                
+     
+            
     /* 1. LAYOUT */    
     /* Sobe o conteúdo para o topo */
     div.block-container {
-        padding-top: 1rem !important;  /* <--- MUDE PARA 1rem (ou 0.5rem se quiser colar no teto) */
+        padding-top: 2rem !important;
         padding-bottom: 3rem !important;
     }
     
@@ -148,55 +149,7 @@ st.markdown("""
         filter: invert(33%) sepia(99%) saturate(1637%) hue-rotate(193deg) brightness(91%) contrast(90%) !important;
         transform: scale(0.9);
     }
-    /* ============================================================
-       PERSONALIZAÇÃO DO BOTÃO DA SIDEBAR (TEXTO ABRIR/FECHAR)
-       ============================================================ */
     
-    /* 1. Botão quando a Sidebar está FECHADA (Aparece no topo esquerdo) */
-    [data-testid="stSidebarCollapsedControl"] {
-        background-color: white !important; /* Fundo branco para destaque */
-        border: 1px solid #2b78c5 !important; /* Borda Azul */
-        border-radius: 8px !important;
-        padding: 5px 10px !important;
-        width: auto !important; /* Permite que o botão cresça para caber o texto */
-        display: flex !important;
-        align-items: center !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    
-    /* Injeta o texto "Abrir Menu" ao lado da setinha */
-    [data-testid="stSidebarCollapsedControl"]::after {
-        content: "Abrir Menu Lateral";
-        margin-left: 8px;
-        color: #2b78c5; /* Texto Azul */
-        font-weight: bold;
-        font-size: 14px;
-        white-space: nowrap; /* Impede quebra de linha */
-    }
-
-    /* Pinta a setinha original de azul */
-    [data-testid="stSidebarCollapsedControl"] svg {
-        fill: #2b78c5 !important;
-        color: #2b78c5 !important;
-    }
-
-    /* 2. Botão quando a Sidebar está ABERTA (Aparece dentro da barra azul) */
-    [data-testid="stSidebarExpandedControl"] {
-        width: auto !important;
-        display: flex !important;
-        align-items: center !important;
-        margin-left: 10px; /* Ajuste fino de posição */
-    }
-
-    /* Injeta o texto "Fechar Menu" ao lado do X */
-    [data-testid="stSidebarExpandedControl"]::after {
-        content: "Fechar Menu";
-        margin-left: 8px;
-        color: white; /* Texto Branco (pois o fundo é azul) */
-        font-weight: bold;
-        font-size: 14px;
-        white-space: nowrap;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -530,7 +483,7 @@ with tab3:
         col1, col2, col3 = st.columns([1,1,1])
   
         with col2:
-            
+            st.markdown('<div class="login-box">', unsafe_allow_html=True)
             st.markdown("### Acesso Restrito")
             pwd = st.text_input("Senha", type="password", label_visibility="collapsed")
             
@@ -547,9 +500,9 @@ with tab3:
                     st.rerun()
                 else: 
                     st.error("Senha incorreta")
-            
+            st.markdown('</div>', unsafe_allow_html=True)
     else:
-        
+        st.markdown('<div class="card">', unsafe_allow_html=True)
         c_head1, c_head2 = st.columns([4,1])
         c_head1.subheader("Gestão de Intervalos")
         if c_head2.button("Sair"): st.session_state['coord_logado'] = False; st.rerun()
@@ -582,4 +535,4 @@ with tab3:
                             st.cache_data.clear()
                         except: st.error("Colunas de intervalo não encontradas na planilha.")
             else: st.info("Sem aulas nesta data.")
-        
+        st.markdown('</div>', unsafe_allow_html=True)
