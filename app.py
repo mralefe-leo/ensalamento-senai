@@ -63,7 +63,8 @@ st.markdown("""
         background: #fffff; 
     }
     [data-testid="stSidebar"] * {
-        color: #e94d16 !important; 
+        color: #e94d16 !important;
+        font-color: #fffff; 
     }
 
     /* Header Personalizado */
