@@ -459,14 +459,25 @@ with tab3:
     
     if not st.session_state['coord_logado']:
         col1, col2, col3 = st.columns([1,1,1])
+        # ... (dentro da Tab 3) ...
         with col2:
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
             st.markdown("### Acesso Restrito")
             pwd = st.text_input("Senha", type="password", label_visibility="collapsed")
+            
             if st.button("Entrar"):
-                
-                if pwd == st.secrets["senha_coordenacao"]:
-                else: st.error("Senha incorreta")
+                # Tenta buscar a senha dos segredos, se não existir, usa uma genérica ou avisa erro
+                try:
+                    senha_secreta = st.secrets["senha_coordenacao"]
+                except:
+                    st.error("ERRO: Senha da coordenação não configurada nos Secrets!")
+                    st.stop()
+
+                if pwd == senha_secreta: 
+                    st.session_state['coord_logado'] = True
+                    st.rerun()
+                else: 
+                    st.error("Senha incorreta")
             st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="card">', unsafe_allow_html=True)
