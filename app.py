@@ -221,41 +221,119 @@ def verificar_disponibilidade_recursos(df, data_agendamento, inicio_novo, fim_no
     return True, ""
 
 def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
+    import matplotlib.pyplot as plt
+    import matplotlib.image as mpimg
+    import io
+
     plt.rcParams['font.family'] = 'DejaVu Sans'
+
+    # ==============================
+    # PREPARAÇÃO DOS DADOS
+    # ==============================
     df_img = df_filtrado.copy()
-    df_img['intervalo_fmt'] = df_img.apply(lambda r: f"{str(r['inicio_intervalo'])}-{str(r['fim_intervalo'])}" if r['inicio_intervalo'] else "-", axis=1)
-    
+
+    df_img['intervalo_fmt'] = df_img.apply(
+        lambda r: f"{r['inicio_intervalo']}-{r['fim_intervalo']}"
+        if str(r['inicio_intervalo']).strip() else "-",
+        axis=1
+    )
+
     colunas_map = {
-        'turno': 'Turno', 'situacao': 'Situação', 'sala': 'Ambiente', 
-        'professor': 'Docente', 'turma': 'Turma', 'intervalo_fmt': 'Intervalo',
-        'qtd_chromebooks': 'Chromes', 'qtd_notebooks': 'Notes'
+        'situacao': 'Situação',
+        'turno': 'Turno',
+        'sala': 'Ambiente',
+        'professor': 'Docente',
+        'turma': 'Turma',
+        'intervalo_fmt': 'Intervalo'
     }
-    # Filtra colunas que realmente existem no dataframe
-    cols_to_use = [c for c in colunas_map.keys() if c in df_img.columns]
-    df_final = df_img[cols_to_use].rename(columns=colunas_map)
-    
-    fig = plt.figure(figsize=(16, max(6, 2.8 + len(df_final)*0.55)), dpi=300)
-    
-    # Cabeçalho da imagem
-    ax_head = fig.add_axes([0, 0.85, 1, 0.15]); ax_head.axis('off')
-    try: ax_head.imshow(mpimg.imread("logo.png"), extent=[0.05, 0.35, 0.2, 0.8], aspect='auto')
-    except: pass
-    ax_head.text(0.5, 0.6, "ENSALAMENTO DIÁRIO", ha="center", fontsize=18, fontweight="bold", color="#004587")
-    ax_head.text(0.5, 0.3, f"Data: {data_selecionada.strftime('%d/%m/%Y')}", ha="center", fontsize=12, color="#555")
-    
-    # Tabela
-    ax_tab = fig.add_axes([0.02, 0.02, 0.96, 0.80]); ax_tab.axis('off')
-    tab = ax_tab.table(cellText=df_final.values, colLabels=df_final.columns, loc='upper center', cellLoc='center')
-    tab.auto_set_font_size(False); tab.set_fontsize(9); tab.scale(1, 1.5)
-    
-    for (r, c), cell in tab.get_celld().items():
-        cell.set_linewidth(0.5); cell.set_edgecolor("#ccc")
-        if r == 0: cell.set_facecolor("#004587"); cell.set_text_props(color="white", weight="bold")
-        elif "INTERVALO" in str(df_final.iloc[r-1]['Docente']).upper(): cell.set_facecolor("#FFFACD")
-        else: cell.set_facecolor("#F5F7FA" if r%2==0 else "white")
-        
-    buf = io.BytesIO(); plt.savefig(buf, format='png', bbox_inches='tight'); buf.seek(0); plt.close(fig)
-    return buf
+
+    df_final = df_img[list(colunas_map.keys())].rename(columns=colunas_map)
+
+    # ==============================
+    # TAMANHO DINÂMICO DA FIGURA
+    # ==============================
+    altura_fig = max(6, 3 + len(df_final) * 0.55)
+
+    fig = plt.figure(figsize=(16, altura_fig), dpi=300)
+
+    # ==============================
+    # CABEÇALHO
+    # ==============================
+    ax_head = fig.add_axes([0, 0.88, 1, 0.12])
+    ax_head.axis("off")
+
+    # LOGO (canto superior esquerdo)
+    try:
+        logo = mpimg.imread("logo.png")
+        ax_head.imshow(
+            logo,
+            extent=[0.02, 0.18, 0.15, 0.85],  # X início/fim | Y início/fim
+            aspect='auto'
+        )
+    except:
+        pass
+
+    # TÍTULO CENTRALIZADO
+    ax_head.text(
+        0.5, 0.65,
+        "ENSALAMENTO DIÁRIO",
+        ha="center",
+        va="center",
+        fontsize=20,
+        fontweight="bold",
+        color="#004587"
+    )
+
+    # DATA ABAIXO DO TÍTULO
+    ax_head.text(
+        0.5, 0.30,
+        f"Data: {data_selecionada.strftime('%d/%m/%Y')}",
+        ha="center",
+        va="center",
+        fontsize=12,
+        color="#555555"
+    )
+
+    # ==============================
+    # TABELA
+    # ==============================
+    ax_tab = fig.add_axes([0.02, 0.02, 0.96, 0.84])
+    ax_tab.axis("off")
+
+    tabela = ax_tab.table(
+        cellText=df_final.values,
+        colLabels=df_final.columns,
+        loc="upper center",
+        cellLoc="center"
+    )
+
+    tabela.auto_set_font_size(False)
+    tabela.set_fontsize(10)
+    tabela.scale(1, 1.5)
+
+    # ==============================
+    # ESTILIZAÇÃO DA TABELA
+    # ==============================
+    for (row, col), cell in tabela.get_celld().items():
+        cell.set_edgecolor("#CCCCCC")
+        cell.set_linewidth(0.5)
+
+        if row == 0:
+            cell.set_facecolor("#004587")
+            cell.set_text_props(color="white", weight="bold")
+        else:
+            cell.set_facecolor("#F5F7FA" if row % 2 == 0 else "white")
+
+    # ==============================
+    # EXPORTAÇÃO PARA PNG
+    # ==============================
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format="png", bbox_inches="tight")
+    buffer.seek(0)
+    plt.close(fig)
+
+    return buffer
+
 
 # =====================================================
 # INTERFACE SIDEBAR
