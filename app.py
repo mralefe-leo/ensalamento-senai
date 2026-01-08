@@ -464,7 +464,8 @@ with tab3:
             st.markdown("### Acesso Restrito")
             pwd = st.text_input("Senha", type="password", label_visibility="collapsed")
             if st.button("Entrar"):
-                if pwd == "#ESS2026": st.session_state['coord_logado'] = True; st.rerun()
+                
+                if pwd == st.secrets["senha_coordenacao"]:
                 else: st.error("Senha incorreta")
             st.markdown('</div>', unsafe_allow_html=True)
     else:
