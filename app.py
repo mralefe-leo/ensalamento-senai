@@ -276,8 +276,7 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     
     #  BLOCO 1 – LOGO CENTRALIZADA
     
-    ax_logo = fig.add_axes([0, 0.80, 1, 0.18])
-
+    ax_logo = fig.add_axes([0, 0.86, 1, 0.08])
     ax_logo.axis('off')
     try:
         logo = mpimg.imread("logo.png")
