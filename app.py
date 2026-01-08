@@ -221,118 +221,95 @@ def verificar_disponibilidade_recursos(df, data_agendamento, inicio_novo, fim_no
     return True, ""
 
 def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
-    import matplotlib.pyplot as plt
-    import matplotlib.image as mpimg
-    import io
-
     plt.rcParams['font.family'] = 'DejaVu Sans'
 
-    # ==============================
-    # PREPARAÇÃO DOS DADOS
-    # ==============================
     df_img = df_filtrado.copy()
-
     df_img['intervalo_fmt'] = df_img.apply(
-        lambda r: f"{r['inicio_intervalo']}-{r['fim_intervalo']}"
-        if str(r['inicio_intervalo']).strip() else "-",
+        lambda r: f"{str(r['inicio_intervalo'])}-{str(r['fim_intervalo'])}" if r['inicio_intervalo'] else "-",
         axis=1
     )
 
     colunas_map = {
-        'situacao': 'Situação',
         'turno': 'Turno',
+        'situacao': 'Situação',
         'sala': 'Ambiente',
         'professor': 'Docente',
         'turma': 'Turma',
-        'intervalo_fmt': 'Intervalo'
+        'intervalo_fmt': 'Intervalo',
+        'qtd_chromebooks': 'Chromes',
+        'qtd_notebooks': 'Notes'
     }
 
-    df_final = df_img[list(colunas_map.keys())].rename(columns=colunas_map)
+    cols_to_use = [c for c in colunas_map.keys() if c in df_img.columns]
+    df_final = df_img[cols_to_use].rename(columns=colunas_map)
 
-    # ==============================
-    # TAMANHO DINÂMICO DA FIGURA
-    # ==============================
-    altura_fig = max(6, 3 + len(df_final) * 0.55)
+    # -------- FIGURA BASE --------
+    linhas = len(df_final) + 6
+    fig = plt.figure(figsize=(16, max(6, 2.5 + len(df_final) * 0.55)), dpi=300)
 
-    fig = plt.figure(figsize=(16, altura_fig), dpi=300)
-
-    # ==============================
-    # CABEÇALHO
-    # ==============================
-    ax_head = fig.add_axes([0, 0.88, 1, 0.12])
-    ax_head.axis("off")
-
-    # LOGO (canto superior esquerdo)
+    # ============================
+    #  BLOCO 1 – LOGO CENTRALIZADA
+    # ============================
+    ax_logo = fig.add_axes([0, 0.83, 1, 0.12])
+    ax_logo.axis('off')
     try:
         logo = mpimg.imread("logo.png")
-        ax_head.imshow(
-            logo,
-            extent=[0.02, 0.18, 0.15, 0.85],  # X início/fim | Y início/fim
-            aspect='auto'
-        )
+        ax_logo.imshow(logo)
     except:
-        pass
+        ax_logo.text(0.5, 0.5, "SENAI", fontsize=22, ha="center", va="center")
 
-    # TÍTULO CENTRALIZADO
-    ax_head.text(
-        0.5, 0.65,
-        "ENSALAMENTO DIÁRIO",
-        ha="center",
-        va="center",
-        fontsize=20,
-        fontweight="bold",
-        color="#004587"
-    )
+    # ============================
+    #  BLOCO 2 – TÍTULO
+    # ============================
+    ax_titulo = fig.add_axes([0, 0.74, 1, 0.08])
+    ax_titulo.axis('off')
+    ax_titulo.text(0.5, 0.5, "ENSALAMENTO DIÁRIO", fontsize=18, fontweight="bold",
+                   ha="center", va="center", color="#004587")
 
-    # DATA ABAIXO DO TÍTULO
-    ax_head.text(
-        0.5, 0.30,
-        f"Data: {data_selecionada.strftime('%d/%m/%Y')}",
-        ha="center",
-        va="center",
-        fontsize=12,
-        color="#555555"
-    )
+    # ============================
+    #  BLOCO 3 – DATA
+    # ============================
+    ax_data = fig.add_axes([0, 0.68, 1, 0.06])
+    ax_data.axis('off')
+    ax_data.text(0.5, 0.5,
+                 f"Data: {data_selecionada.strftime('%d/%m/%Y')}",
+                 fontsize=12,
+                 ha="center", va="center", color="#444")
 
-    # ==============================
-    # TABELA
-    # ==============================
-    ax_tab = fig.add_axes([0.02, 0.02, 0.96, 0.84])
-    ax_tab.axis("off")
+    # ============================
+    #  BLOCO 4 – TABELA
+    # ============================
+    ax_tab = fig.add_axes([0.03, 0.05, 0.94, 0.60])
+    ax_tab.axis('off')
 
     tabela = ax_tab.table(
         cellText=df_final.values,
         colLabels=df_final.columns,
-        loc="upper center",
-        cellLoc="center"
+        loc='upper center',
+        cellLoc='center'
     )
 
     tabela.auto_set_font_size(False)
-    tabela.set_fontsize(10)
-    tabela.scale(1, 1.5)
+    tabela.set_fontsize(9)
+    tabela.scale(1, 1.4)
 
-    # ==============================
-    # ESTILIZAÇÃO DA TABELA
-    # ==============================
-    for (row, col), cell in tabela.get_celld().items():
-        cell.set_edgecolor("#CCCCCC")
+    for (r, c), cell in tabela.get_celld().items():
         cell.set_linewidth(0.5)
+        cell.set_edgecolor("#cccccc")
 
-        if row == 0:
+        if r == 0:
             cell.set_facecolor("#004587")
             cell.set_text_props(color="white", weight="bold")
         else:
-            cell.set_facecolor("#F5F7FA" if row % 2 == 0 else "white")
+            cell.set_facecolor("#F7F9FC" if r % 2 == 0 else "white")
 
-    # ==============================
-    # EXPORTAÇÃO PARA PNG
-    # ==============================
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format="png", bbox_inches="tight")
-    buffer.seek(0)
+    # SALVAR EM MEMÓRIA
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", bbox_inches="tight")
+    buf.seek(0)
     plt.close(fig)
 
-    return buffer
+    return buf
 
 
 # =====================================================
