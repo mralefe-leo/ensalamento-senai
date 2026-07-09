@@ -23,8 +23,9 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
         axis=1
     )
 
-    width_docente = 24
-    width_turma = 32
+    width_docente = 18
+    width_turma = 25
+    width_ambiente = 25
 
     def advanced_wrap_indent(text, width, pad="   "):
         lines = textwrap.wrap(str(text), width=width)
@@ -34,6 +35,7 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
 
     df_img['turma'] = df_img['turma'].apply(lambda x: advanced_wrap_indent(x, width_turma))
     df_img['professor'] = df_img['professor'].apply(lambda x: advanced_wrap_indent(x, width_docente))
+    df_img['sala'] = df_img['sala'].apply(lambda x: advanced_wrap_indent(x, width_ambiente))
 
     colunas_map = {
         'turno': 'Turno', 'sala': 'Ambiente', 'professor': 'Docente',
@@ -81,8 +83,8 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
     tabela.set_fontsize(11)
 
     larguras = {
-        'Turno': 0.07, 'Ambiente': 0.11, 'Docente': 0.22, 'Turma': 0.33, 
-        'Alunos': 0.06, 'Intervalo': 0.11, 'Recursos': 0.10
+        'Turno': 0.07, 'Ambiente': 0.22, 'Docente': 0.20, 'Turma': 0.25, 
+        'Alunos': 0.06, 'Intervalo': 0.09, 'Recursos': 0.09
     }
 
     for (r, c), cell in tabela.get_celld().items():
@@ -100,7 +102,7 @@ def gerar_imagem_ensalamento(df_filtrado, data_selecionada):
             cell.get_text().set_ha('center') 
         else:
             cell.set_facecolor("#E6F0FA" if r % 2 == 0 else "white")
-            if col_name in ['Docente', 'Turma']: cell.get_text().set_ha('left')
+            if col_name in ['Ambiente', 'Docente', 'Turma']: cell.get_text().set_ha('left')
 
     buf = io.BytesIO()
     plt.savefig(buf, format="png", bbox_inches="tight", pad_inches=0.1) 

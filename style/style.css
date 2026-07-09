@@ -146,3 +146,9 @@
         transform: scale(0.9);
     }
     
+div[data-testid="stButton"] > button:hover {
+    background-color: #e94d16 !important;
+    border-color: #e94d16 !important;
+    color: #ffffff !important;
+    transition: 0.3s ease-in-out;
+}

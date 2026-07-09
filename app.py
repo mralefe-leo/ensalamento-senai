@@ -114,46 +114,74 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4 = st.tabs(["Novo Agendamento", "Visualizar Agenda", "Coordenação", "Dashboard"])
+# --- INICIALIZA A MEMÓRIA DA NAVEGAÇÃO ---
+if 'menu_ativo' not in st.session_state:
+    st.session_state['menu_ativo'] = "Novo Agendamento"
+
+# --- O NOVO MENU EM FORMATO DE BOTÕES ---
+c_menu1, c_menu2, c_menu3, c_menu4 = st.columns(4)
+
+with c_menu1:
+    if st.button("Novo Agendamento", use_container_width=True, type="primary" if st.session_state['menu_ativo'] == "Novo Agendamento" else "secondary"):
+        st.session_state['menu_ativo'] = "Novo Agendamento"
+        st.rerun()
+
+with c_menu2:
+    if st.button("Visualizar Agenda", use_container_width=True, type="primary" if st.session_state['menu_ativo'] == "Visualizar Agenda" else "secondary"):
+        st.session_state['menu_ativo'] = "Visualizar Agenda"
+        st.rerun()
+
+with c_menu3:
+    if st.button("Coordenação", use_container_width=True, type="primary" if st.session_state['menu_ativo'] == "Coordenação" else "secondary"):
+        st.session_state['menu_ativo'] = "Coordenação"
+        st.rerun()
+
+with c_menu4:
+    if st.button("Dashboard", use_container_width=True, type="primary" if st.session_state['menu_ativo'] == "Dashboard" else "secondary"):
+        st.session_state['menu_ativo'] = "Dashboard"
+        st.rerun()
+
+st.markdown("---")
+
+# --- LÓGICA DE EXIBIÇÃO DE TELAS ---
+menu_selecionado = st.session_state.get('menu_ativo', 'Novo Agendamento')
 
 
 # TAB 1: AGENDAMENTO 
  
 
-with tab1:
+if menu_selecionado == "Novo Agendamento":
     
     lista_docentes = carregar_lista_auxiliar("Docentes")
     lista_turmas = carregar_lista_auxiliar("Turmas")
     lista_salas = carregar_lista_auxiliar("Salas")
 
-    with st.form("form_agendamento"):
+    with st.form("form_agendamento", clear_on_submit=True):
         st.subheader("Dados do Agendamento")
         c1, c2 = st.columns(2)
-        
         
         with c1:
             professor = st.selectbox("Docente", lista_docentes) if lista_docentes else st.text_input("Docente (Cadastre na aba Coordenação)")
             turma = st.selectbox("Turma/Curso", lista_turmas) if lista_turmas else st.text_input("Turma (Cadastre na aba Coordenação)")
             sala = st.selectbox("Ambiente / Sala", lista_salas) if lista_salas else st.warning("Cadastre salas na aba Coordenação")
             
-            
             st.markdown("<br>", unsafe_allow_html=True) 
-            data = st.date_input("Data da Aula")
             
-            
+            # --- CAMPOS DE PERÍODO ---
+            cd1, cd2 = st.columns(2)
+            data_inicio = cd1.date_input("Data Inicial", key="hub_data_ini")
+            data_fim = cd2.date_input("Data Final", value=data_inicio, help="Para um único dia, deixe igual à data inicial.", key="hub_data_fim")
+
             st.markdown("<br>", unsafe_allow_html=True)
-            qtd_alunos = st.number_input("Quantidade de Alunos", min_value=0, step=1, help="Número aproximado de alunos")
+            qtd_alunos = st.number_input("Quantidade de Alunos", min_value=0, step=1, help="Número aproximado de alunos", key="hub_alunos")
         
-        # --- COLUNA DA DIREITA (c2) ---
         with c2:
             turno = st.selectbox("Turno", ["Manhã", "Tarde", "Noite", "Integral"])
             situacao = st.radio("Período", ["Turno Inteiro", "1º Horário", "2º Horário"], horizontal=True)
             
-            
             ch1, ch2 = st.columns(2)
             hora_inicio = ch1.selectbox("Início Aula", OPCOES_INICIO)
             hora_fim = ch2.selectbox("Fim Aula", OPCOES_FIM)
-            
             
             st.markdown("<br>", unsafe_allow_html=True)
             ci1, ci2 = st.columns(2)
@@ -165,7 +193,6 @@ with tab1:
                     unsafe_allow_html=True
                 )
                 sel_intervalo = st.selectbox("Selecione intervalo", OPCOES_INTERVALO, label_visibility="collapsed")
-            
             
             if sel_intervalo and "–" in sel_intervalo:
                 partes = sel_intervalo.split("–")
@@ -183,51 +210,74 @@ with tab1:
 
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Botão de confirmação
+        # --- LÓGICA DE VALIDAÇÃO EM LOTE ---
         if st.form_submit_button("Confirmar Agendamento", type="primary", use_container_width=True):
             
             if not professor or not turma or not sala:
                 st.warning("⚠️ Verifique se Docente, Turma e Sala estão selecionados.")
+            elif data_fim < data_inicio:
+                st.error("❌ Lógica Incorreta: A Data Final não pode ser anterior à Data Inicial.")
             else:
-                
                 obj_inicio = datetime.strptime(hora_inicio, "%H:%M").time()
                 obj_fim = datetime.strptime(hora_fim, "%H:%M").time()
-                
                 
                 if obj_fim <= obj_inicio:
                     st.error("❌ Erro de Lógica: O horário de FIM deve ser maior que o INÍCIO.")
                 else:
-                    df_check = carregar_dados()
-                    conflito, msg_c = verificar_conflito_sala(df_check, sala, data, obj_inicio, obj_fim)
-                    recurso_ok, msg_r = verificar_disponibilidade_recursos(df_check, data, obj_inicio, obj_fim, qtd_chrome, qtd_note)
+                    from datetime import timedelta
+                    dias_uteis = []
+                    delta = data_fim - data_inicio
                     
-                    if conflito or not recurso_ok:
-                        if conflito: st.error(f"❌ {msg_c}")
-                        if not recurso_ok: 
-                            with st.container(): st.error(f"❌ Indisponibilidade de Recursos:\n{msg_r}")
+                    # Filtra Sábados e Domingos
+                    for i in range(delta.days + 1):
+                        dia_atual = data_inicio + timedelta(days=i)
+                        if dia_atual.weekday() < 5: 
+                            dias_uteis.append(dia_atual)
+                    
+                    if not dias_uteis:
+                        st.error("❌ O período selecionado não possui dias úteis.")
                     else:
-                        ss = conectar_google_sheets()
-                        sheet = ss.sheet1
+                        df_check = carregar_dados()
+                        erros = []
                         
-                        
-                        sheet.append_row([
-                            str(data), turno, situacao, hora_inicio, hora_fim,
-                            str(sala).upper(),      
-                            str(professor).upper(), 
-                            str(turma).upper(),     
-                            str(datetime.now()),
-                            qtd_chrome, qtd_note, inicio_intervalo, fim_intervalo,
-                            qtd_alunos              
-                        ])
-                        st.success("✅ Agendado com sucesso!")
-                        import time
-                        time.sleep(1.5)
-                        st.rerun()
+                        # Verifica todos os dias
+                        for dia in dias_uteis:
+                            conflito, msg_c = verificar_conflito_sala(df_check, sala, dia, obj_inicio, obj_fim)
+                            recurso_ok, msg_r = verificar_disponibilidade_recursos(df_check, dia, obj_inicio, obj_fim, qtd_chrome, qtd_note)
+                            
+                            if conflito: erros.append(f"• **{dia.strftime('%d/%m/%Y')}**: {msg_c}")
+                            if not recurso_ok: erros.append(f"• **{dia.strftime('%d/%m/%Y')}**: {msg_r}")
+                            
+                        if erros:
+                            st.error("⚠️ Foram encontrados conflitos no seu período:")
+                            for erro in erros:
+                                st.write(erro)
+                        else:
+                            ss = conectar_google_sheets()
+                            sheet = ss.sheet1
+                            agora_str = str(datetime.now())
+                            
+                            linhas_para_inserir = []
+                            for dia in dias_uteis:
+                                linhas_para_inserir.append([
+                                    str(dia), turno, situacao, hora_inicio, hora_fim,
+                                    str(sala).upper(),      
+                                    str(professor).upper(), 
+                                    str(turma).upper(),     
+                                    agora_str,
+                                    qtd_chrome, qtd_note, inicio_intervalo, fim_intervalo,
+                                    qtd_alunos              
+                                ])
+                            
+                            sheet.append_rows(linhas_para_inserir)
+                            st.success(f"✅ Agendamento de {len(dias_uteis)} dia(s) útil(eis) realizado com sucesso!")
+                            import time; time.sleep(1.5)
+                            st.rerun()
 
 
 # TAB 2: VISUALIZAÇÃO (CORRIGIDA)
 
-with tab2:
+if menu_selecionado == "Visualizar Agenda":
     
     c1, c2, c3 = st.columns([1,2,1])
     filtro_data = c1.date_input("Data", datetime.today())
@@ -299,7 +349,7 @@ with tab2:
 
 # TAB 3: COORDENAÇÃO 
 
-with tab3:
+if menu_selecionado == "Coordenação":
     st.subheader("Gestão de Cadastros e Agendamentos")
     
     with st.expander("Remover Agendamentos", expanded=True):
@@ -453,8 +503,7 @@ with tab3:
 
 # TAB 4: DASHBOARD INTERATIVO
 
-
-with tab4:
+if menu_selecionado == "Dashboard":
     st.markdown("<br>", unsafe_allow_html=True)
     
     # 1. FILTROS (Lado a Lado)
